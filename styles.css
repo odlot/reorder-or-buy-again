@@ -70,7 +70,7 @@ body {
 .quick-add-form {
   margin-top: 0.65rem;
   display: grid;
-  grid-template-columns: 1fr 5.6rem auto;
+  grid-template-columns: 1fr auto;
   gap: 0.45rem;
   align-items: center;
 }

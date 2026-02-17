@@ -31,7 +31,6 @@ const VALID_VIEWS = new Set(Object.values(VIEWS));
 const searchInput = document.querySelector("#search-input");
 const quickAddForm = document.querySelector("#quick-add-form");
 const quickAddNameInput = document.querySelector("#quick-add-name");
-const quickAddQuantityInput = document.querySelector("#quick-add-quantity");
 const quickAddMessage = document.querySelector("#quick-add-message");
 const listToolbar = document.querySelector("#list-toolbar");
 const inventoryView = document.querySelector("#inventory-view");
@@ -241,7 +240,7 @@ function addItem(input) {
 function addItemFromQuickForm() {
   const result = addItem({
     name: quickAddNameInput.value,
-    quantity: quickAddQuantityInput.value,
+    quantity: 1,
     lowThreshold: "",
     category: "",
   });
@@ -253,7 +252,6 @@ function addItemFromQuickForm() {
   }
 
   quickAddForm.reset();
-  quickAddQuantityInput.value = "0";
   setQuickAddNotice(`Added ${result.name}.`, "success");
   setSettingsNotice("", "");
   persistAndRender();
