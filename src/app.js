@@ -44,11 +44,6 @@ const navTabs = document.querySelectorAll(".nav-tab");
 const restockBadge = document.querySelector("#restock-badge");
 
 const defaultThresholdInput = document.querySelector("#default-threshold-input");
-const addItemForm = document.querySelector("#add-item-form");
-const addItemNameInput = document.querySelector("#add-item-name");
-const addItemQuantityInput = document.querySelector("#add-item-quantity");
-const addItemThresholdInput = document.querySelector("#add-item-threshold");
-const addItemCategoryInput = document.querySelector("#add-item-category");
 const settingsItemList = document.querySelector("#settings-item-list");
 const settingsCount = document.querySelector("#settings-count");
 const settingsMessage = document.querySelector("#settings-message");
@@ -213,27 +208,6 @@ function addItem(input) {
     ok: true,
     name,
   };
-}
-
-function addItemFromSettingsForm() {
-  const result = addItem({
-    name: addItemNameInput.value,
-    quantity: addItemQuantityInput.value,
-    lowThreshold: addItemThresholdInput.value,
-    category: addItemCategoryInput.value,
-  });
-
-  if (!result.ok) {
-    setSettingsNotice(result.error, "error");
-    render();
-    return;
-  }
-
-  addItemForm.reset();
-  addItemQuantityInput.value = "0";
-  setSettingsNotice(`Added ${result.name}.`, "success");
-  setQuickAddNotice("", "");
-  persistAndRender();
 }
 
 function addItemFromQuickForm() {
@@ -408,11 +382,6 @@ defaultThresholdInput.addEventListener("change", (event) => {
   state.settings.defaultLowThreshold = clampQuantity(event.target.value);
   setSettingsNotice("Default threshold updated.", "success");
   persistAndRender();
-});
-
-addItemForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  addItemFromSettingsForm();
 });
 
 quickAddForm.addEventListener("submit", (event) => {
