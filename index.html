@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reorder or Buy Again</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <h1>Inventory</h1>
+        <p class="subtitle">Quickly track household essentials.</p>
+      </header>
+
+      <section class="toolbar" aria-label="Filters and summary">
+        <label class="search-wrap" for="search-input">
+          <span class="sr-only">Search inventory</span>
+          <input
+            id="search-input"
+            type="search"
+            name="search"
+            autocomplete="off"
+            placeholder="Search items"
+          />
+        </label>
+        <p id="summary-line" class="summary-line" aria-live="polite"></p>
+      </section>
+
+      <section aria-label="All items">
+        <ul id="item-list" class="item-list"></ul>
+        <p id="empty-state" class="empty-state hidden">
+          No items match your search.
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
