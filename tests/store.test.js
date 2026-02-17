@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  LEGACY_STORAGE_KEY,
   STORAGE_KEY,
   createDefaultState,
   deserializeState,
@@ -38,25 +37,18 @@ test("createDefaultState returns starter items and default settings", () => {
   assert.equal(state.settings.defaultLowThreshold, 1);
 });
 
-test("loadState supports legacy array storage", () => {
-  const legacyItems = [
-    { id: "legacy-1", name: "Soap", quantity: 1, lowThreshold: 2 },
-  ];
+test("loadState falls back to defaults for invalid stored payloads", () => {
   const storage = createMemoryStorage({
-    [LEGACY_STORAGE_KEY]: JSON.stringify(legacyItems),
+    [STORAGE_KEY]: JSON.stringify({ foo: "bar" }),
   });
 
   const state = loadState(storage);
-  assert.equal(state.items.length, 1);
-  assert.equal(state.items[0].name, "Soap");
+  assert.ok(state.items.length > 0);
   assert.equal(state.settings.defaultLowThreshold, 1);
 });
 
-test("saveState writes current schema and clears legacy key", () => {
-  const storage = createMemoryStorage({
-    [LEGACY_STORAGE_KEY]: "[]",
-  });
-
+test("saveState writes current schema and round-trips through loadState", () => {
+  const storage = createMemoryStorage();
   const state = {
     items: [{ id: "a", name: "Trash Bags", quantity: 4, lowThreshold: 2 }],
     settings: { defaultLowThreshold: 3 },
@@ -68,7 +60,6 @@ test("saveState writes current schema and clears legacy key", () => {
   assert.equal(reloaded.items.length, 1);
   assert.equal(reloaded.items[0].name, "Trash Bags");
   assert.equal(reloaded.settings.defaultLowThreshold, 3);
-  assert.equal(storage.getItem(LEGACY_STORAGE_KEY), null);
   assert.ok(storage.getItem(STORAGE_KEY));
 });
 

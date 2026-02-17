@@ -1,8 +1,6 @@
 import { clampQuantity } from "./logic.js";
 
-export const STORAGE_KEY = "reorder-or-buy-again.state.v2";
-export const LEGACY_STORAGE_KEY = "reorder-or-buy-again.items.v1";
-export const SCHEMA_VERSION = 2;
+export const STORAGE_KEY = "reorder-or-buy-again.state";
 export const DEFAULT_SETTINGS = Object.freeze({
   defaultLowThreshold: 1,
 });
@@ -133,14 +131,6 @@ function dedupeItemsById(items) {
 }
 
 export function normalizeState(candidateState) {
-  if (Array.isArray(candidateState)) {
-    const settings = createDefaultSettings();
-    const items = dedupeItemsById(
-      candidateState.map((item) => normalizeItem(item, settings)).filter(Boolean)
-    );
-    return { items, settings };
-  }
-
   if (!candidateState || typeof candidateState !== "object") {
     return createDefaultState();
   }
@@ -177,16 +167,11 @@ export function loadState(storage = globalThis.localStorage) {
   }
 
   const current = parseJson(storage.getItem(STORAGE_KEY));
-  if (current !== null) {
-    return normalizeState(current);
+  if (current === null) {
+    return createDefaultState();
   }
 
-  const legacy = parseJson(storage.getItem(LEGACY_STORAGE_KEY));
-  if (legacy !== null) {
-    return normalizeState(legacy);
-  }
-
-  return createDefaultState();
+  return normalizeState(current);
 }
 
 export function saveState(state, storage = globalThis.localStorage) {
@@ -196,17 +181,12 @@ export function saveState(state, storage = globalThis.localStorage) {
 
   const normalized = normalizeState(state);
   const snapshot = {
-    version: SCHEMA_VERSION,
     items: normalized.items,
     settings: normalized.settings,
     updatedAt: new Date().toISOString(),
   };
 
   storage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-
-  if (typeof storage.removeItem === "function") {
-    storage.removeItem(LEGACY_STORAGE_KEY);
-  }
 }
 
 export function updateItemQuantity(items, itemId, nextQuantity) {
@@ -258,7 +238,6 @@ export function serializeState(state) {
 
   return JSON.stringify(
     {
-      version: SCHEMA_VERSION,
       items: normalized.items,
       settings: normalized.settings,
       exportedAt: new Date().toISOString(),
@@ -274,10 +253,6 @@ export function deserializeState(rawText) {
     parsed = JSON.parse(rawText);
   } catch {
     throw new Error("Backup file is not valid JSON.");
-  }
-
-  if (Array.isArray(parsed)) {
-    return normalizeState(parsed);
   }
 
   if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.items)) {

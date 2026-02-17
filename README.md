@@ -49,5 +49,5 @@ Milestones A, B, and C are implemented:
 - Dedicated Restock view (low-stock items only)
 - Settings: default threshold, backup import/export, reset local data
 - Import/export JSON backups
-- Local persistence via `localStorage` with schema migration support
+- Local persistence via `localStorage`
 - Unit/persistence tests via Node test runner
