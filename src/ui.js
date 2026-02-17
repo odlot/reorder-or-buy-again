@@ -29,9 +29,14 @@ export function renderList(container, items) {
             <button class="step-button" type="button" data-action="step" data-step="-1" aria-label="Decrease ${safeName}">
               -
             </button>
-            <button class="qty-button" type="button" data-action="edit" aria-label="Set quantity for ${safeName}">
-              ${item.quantity}
-            </button>
+            <input
+              class="qty-input"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              value="${item.quantity}"
+              aria-label="Quantity for ${safeName}"
+            />
             <button class="step-button" type="button" data-action="step" data-step="1" aria-label="Increase ${safeName}">
               +
             </button>

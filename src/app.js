@@ -24,13 +24,13 @@ const VIEWS = {
   RESTOCK: "restock",
   SETTINGS: "settings",
 };
+const DELETE_UNDO_MS = 8000;
 
 const VALID_VIEWS = new Set(Object.values(VIEWS));
 
 const searchInput = document.querySelector("#search-input");
 const quickAddForm = document.querySelector("#quick-add-form");
 const quickAddNameInput = document.querySelector("#quick-add-name");
-const quickAddQuantityInput = document.querySelector("#quick-add-quantity");
 const quickAddMessage = document.querySelector("#quick-add-message");
 const listToolbar = document.querySelector("#list-toolbar");
 const inventoryView = document.querySelector("#inventory-view");
@@ -40,6 +40,9 @@ const summaryLine = document.querySelector("#summary-line");
 const emptyState = document.querySelector("#empty-state");
 const navTabs = document.querySelectorAll(".nav-tab");
 const restockBadge = document.querySelector("#restock-badge");
+const undoToast = document.querySelector("#undo-toast");
+const undoMessage = document.querySelector("#undo-message");
+const undoButton = document.querySelector("#undo-button");
 
 const defaultThresholdInput = document.querySelector("#default-threshold-input");
 const settingsMessage = document.querySelector("#settings-message");
@@ -61,6 +64,7 @@ const state = {
     text: "",
     tone: "",
   },
+  pendingDelete: null,
 };
 
 function getVisibleItems() {
@@ -77,6 +81,30 @@ function setSettingsNotice(text, tone = "") {
 
 function setQuickAddNotice(text, tone = "") {
   state.quickAddNotice = { text, tone };
+}
+
+function clearPendingDelete() {
+  if (!state.pendingDelete) {
+    return;
+  }
+
+  clearTimeout(state.pendingDelete.timerId);
+  state.pendingDelete = null;
+}
+
+function scheduleUndo(item, index) {
+  clearPendingDelete();
+
+  const timerId = setTimeout(() => {
+    state.pendingDelete = null;
+    render();
+  }, DELETE_UNDO_MS);
+
+  state.pendingDelete = {
+    item,
+    index,
+    timerId,
+  };
 }
 
 function renderSettingsPanel() {
@@ -147,6 +175,13 @@ function render() {
     state.quickAddNotice.tone === "success"
   );
 
+  if (state.pendingDelete) {
+    undoMessage.textContent = `"${state.pendingDelete.item.name}" removed.`;
+    undoToast.classList.remove("hidden");
+  } else {
+    undoToast.classList.add("hidden");
+  }
+
   if (isSettings) {
     renderSettingsPanel();
     return;
@@ -205,7 +240,7 @@ function addItem(input) {
 function addItemFromQuickForm() {
   const result = addItem({
     name: quickAddNameInput.value,
-    quantity: quickAddQuantityInput.value,
+    quantity: 1,
     lowThreshold: "",
     category: "",
   });
@@ -217,7 +252,6 @@ function addItemFromQuickForm() {
   }
 
   quickAddForm.reset();
-  quickAddQuantityInput.value = "0";
   setQuickAddNotice(`Added ${result.name}.`, "success");
   setSettingsNotice("", "");
   persistAndRender();
@@ -232,19 +266,52 @@ function decodeItemId(rawId) {
 }
 
 function deleteItemById(itemId) {
-  const item = state.items.find((entry) => entry.id === itemId);
+  const index = state.items.findIndex((entry) => entry.id === itemId);
+  if (index === -1) {
+    return;
+  }
+
+  const item = state.items[index];
   if (!item) {
     return;
   }
 
-  const shouldDelete = window.confirm(`Delete "${item.name}"?`);
+  const itemName = item.name;
+  const snapshot = { ...item };
+
+  const shouldDelete = window.confirm(`Delete "${itemName}"?`);
   if (!shouldDelete) {
     return;
   }
 
+  scheduleUndo(snapshot, index);
   state.items = removeItem(state.items, itemId);
-  setQuickAddNotice(`Deleted ${item.name}.`, "success");
+  setQuickAddNotice(`Deleted ${itemName}.`, "success");
   setSettingsNotice("", "");
+  persistAndRender();
+}
+
+function undoDelete() {
+  if (!state.pendingDelete) {
+    return;
+  }
+
+  const { item, index, timerId } = state.pendingDelete;
+  clearTimeout(timerId);
+  state.pendingDelete = null;
+
+  if (state.items.some((entry) => entry.id === item.id)) {
+    render();
+    return;
+  }
+
+  const targetIndex = Math.min(Math.max(index, 0), state.items.length);
+  state.items = [
+    ...state.items.slice(0, targetIndex),
+    item,
+    ...state.items.slice(targetIndex),
+  ];
+  setQuickAddNotice(`Restored ${item.name}.`, "success");
   persistAndRender();
 }
 
@@ -278,6 +345,7 @@ async function importBackupFile(file) {
     const text = await file.text();
     const imported = deserializeState(text);
 
+    clearPendingDelete();
     state.items = imported.items;
     state.settings = imported.settings;
     setSettingsNotice("Backup imported successfully.", "success");
@@ -299,6 +367,7 @@ function resetLocalData() {
   }
 
   const defaults = createDefaultState();
+  clearPendingDelete();
   state.items = defaults.items;
   state.settings = defaults.settings;
   state.query = "";
@@ -382,19 +451,32 @@ itemList.addEventListener("click", (event) => {
     return;
   }
 
-  if (action === "edit") {
-    const userValue = window.prompt(`Set quantity for ${item.name}`, item.quantity);
-    if (userValue === null) {
-      return;
-    }
-
-    setQuantity(itemId, clampQuantity(userValue));
-    return;
-  }
-
   if (action === "delete") {
     deleteItemById(itemId);
   }
+});
+
+itemList.addEventListener("change", (event) => {
+  const input = event.target.closest(".qty-input");
+  if (!input) {
+    return;
+  }
+
+  const row = input.closest("[data-item-id]");
+  if (!row) {
+    return;
+  }
+
+  const itemId = decodeItemId(row.dataset.itemId);
+  if (!itemId) {
+    return;
+  }
+
+  setQuantity(itemId, clampQuantity(input.value));
+});
+
+undoButton.addEventListener("click", () => {
+  undoDelete();
 });
 
 render();
