@@ -23,6 +23,7 @@ Run the same validation locally that CI runs:
 ```
 
 This runs:
+
 - JavaScript syntax checks for `src/*.js` and `tests/*.test.js`
 - Node test suite via `node --test`
 
@@ -33,6 +34,18 @@ npm install
 npx playwright install chromium
 ./scripts/test-e2e.sh
 ```
+
+## Deployment (GitHub Pages)
+
+The app is deployed as a static site from the `main` branch via GitHub Actions.
+
+One-time setup in GitHub:
+
+1. Open repository `Settings`.
+2. Go to `Pages`.
+3. Set source to `GitHub Actions`.
+
+After that, every push to `main` runs validation, e2e, and then deploys the static site automatically.
 
 ## Git Hooks
 
