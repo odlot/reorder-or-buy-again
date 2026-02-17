@@ -25,10 +25,5 @@ jobs:
         with:
           node-version: 20
 
-      - name: Syntax check modules
-        run: |
-          set -euo pipefail
-          node --check scripts/logic.js
-          node --check scripts/store.js
-          node --check scripts/ui.js
-          node --check scripts/app.js
+      - name: Run validation script
+        run: ./scripts/validate.sh

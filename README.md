@@ -14,6 +14,24 @@ python3 -m http.server 8000
 
 Then open `http://localhost:8000`.
 
+## Validation
+
+Run the same validation locally that CI runs:
+
+```bash
+./scripts/validate.sh
+```
+
+## Git Hooks
+
+Enable repo-managed hooks once per clone:
+
+```bash
+./scripts/setup-git-hooks.sh
+```
+
+After setup, every `git commit` runs `./scripts/validate.sh` via pre-commit.
+
 ## Current status
 
 Milestone A is implemented:
