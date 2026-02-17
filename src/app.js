@@ -30,6 +30,10 @@ const VIEWS = {
 const VALID_VIEWS = new Set(Object.values(VIEWS));
 
 const searchInput = document.querySelector("#search-input");
+const quickAddForm = document.querySelector("#quick-add-form");
+const quickAddNameInput = document.querySelector("#quick-add-name");
+const quickAddQuantityInput = document.querySelector("#quick-add-quantity");
+const quickAddMessage = document.querySelector("#quick-add-message");
 const listToolbar = document.querySelector("#list-toolbar");
 const inventoryView = document.querySelector("#inventory-view");
 const settingsView = document.querySelector("#settings-view");
@@ -58,6 +62,10 @@ const state = {
   settings: initialState.settings,
   query: "",
   activeView: VIEWS.ALL,
+  quickAddNotice: {
+    text: "",
+    tone: "",
+  },
   settingsNotice: {
     text: "",
     tone: "",
@@ -74,6 +82,10 @@ function getVisibleItems() {
 
 function setSettingsNotice(text, tone = "") {
   state.settingsNotice = { text, tone };
+}
+
+function setQuickAddNotice(text, tone = "") {
+  state.quickAddNotice = { text, tone };
 }
 
 function renderSettingsPanel() {
@@ -138,6 +150,16 @@ function render() {
   restockBadge.textContent = lowCount > 99 ? "99+" : String(lowCount);
   restockBadge.classList.toggle("hidden", lowCount === 0);
 
+  quickAddMessage.textContent = state.quickAddNotice.text;
+  quickAddMessage.classList.toggle(
+    "is-error",
+    state.quickAddNotice.tone === "error"
+  );
+  quickAddMessage.classList.toggle(
+    "is-success",
+    state.quickAddNotice.tone === "success"
+  );
+
   if (isSettings) {
     renderSettingsPanel();
     return;
@@ -159,35 +181,79 @@ function setQuantity(itemId, nextQuantity) {
   persistAndRender();
 }
 
-function addItemFromForm() {
-  const name = addItemNameInput.value.trim();
+function addItem(input) {
+  const name = String(input.name || "").trim();
   if (!name) {
-    setSettingsNotice("Item name is required.", "error");
-    render();
-    return;
+    return {
+      ok: false,
+      error: "Item name is required.",
+    };
   }
 
   const nextItems = upsertItem(
     state.items,
     {
       name,
-      quantity: addItemQuantityInput.value,
-      lowThreshold: addItemThresholdInput.value,
-      category: addItemCategoryInput.value,
+      quantity: input.quantity,
+      lowThreshold: input.lowThreshold,
+      category: input.category,
     },
     state.settings
   );
 
   if (nextItems.length === state.items.length) {
-    setSettingsNotice("Could not add item. Check your input.", "error");
+    return {
+      ok: false,
+      error: "Could not add item. Check your input.",
+    };
+  }
+
+  state.items = nextItems;
+  return {
+    ok: true,
+    name,
+  };
+}
+
+function addItemFromSettingsForm() {
+  const result = addItem({
+    name: addItemNameInput.value,
+    quantity: addItemQuantityInput.value,
+    lowThreshold: addItemThresholdInput.value,
+    category: addItemCategoryInput.value,
+  });
+
+  if (!result.ok) {
+    setSettingsNotice(result.error, "error");
     render();
     return;
   }
 
-  state.items = nextItems;
   addItemForm.reset();
   addItemQuantityInput.value = "0";
-  setSettingsNotice(`Added ${name}.`, "success");
+  setSettingsNotice(`Added ${result.name}.`, "success");
+  setQuickAddNotice("", "");
+  persistAndRender();
+}
+
+function addItemFromQuickForm() {
+  const result = addItem({
+    name: quickAddNameInput.value,
+    quantity: quickAddQuantityInput.value,
+    lowThreshold: "",
+    category: "",
+  });
+
+  if (!result.ok) {
+    setQuickAddNotice(result.error, "error");
+    render();
+    return;
+  }
+
+  quickAddForm.reset();
+  quickAddQuantityInput.value = "0";
+  setQuickAddNotice(`Added ${result.name}.`, "success");
+  setSettingsNotice("", "");
   persistAndRender();
 }
 
@@ -338,7 +404,12 @@ defaultThresholdInput.addEventListener("change", (event) => {
 
 addItemForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  addItemFromForm();
+  addItemFromSettingsForm();
+});
+
+quickAddForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  addItemFromQuickForm();
 });
 
 settingsItemList.addEventListener("click", (event) => {

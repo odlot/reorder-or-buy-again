@@ -25,6 +25,33 @@
           />
         </label>
         <p id="summary-line" class="summary-line" aria-live="polite"></p>
+
+        <form id="quick-add-form" class="quick-add-form" aria-label="Quick add item">
+          <label class="sr-only" for="quick-add-name">Item name</label>
+          <input
+            id="quick-add-name"
+            type="text"
+            name="name"
+            autocomplete="off"
+            required
+            maxlength="80"
+            placeholder="Quick add item"
+          />
+
+          <label class="sr-only" for="quick-add-quantity">Quantity</label>
+          <input
+            id="quick-add-quantity"
+            type="number"
+            name="quantity"
+            inputmode="numeric"
+            min="0"
+            step="1"
+            value="0"
+          />
+
+          <button class="action-button primary-button" type="submit">Add</button>
+        </form>
+        <p id="quick-add-message" class="quick-add-message" aria-live="polite"></p>
       </section>
 
       <section id="inventory-view" aria-label="Inventory items">

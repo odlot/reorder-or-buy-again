@@ -67,7 +67,44 @@ body {
   font-size: 1rem;
 }
 
+.quick-add-form {
+  margin-top: 0.65rem;
+  display: grid;
+  grid-template-columns: 1fr 5.6rem auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.quick-add-form input {
+  height: 2.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--panel);
+  padding: 0 0.75rem;
+  font-size: 0.94rem;
+}
+
+.quick-add-form button {
+  min-height: 2.75rem;
+}
+
+.quick-add-message {
+  margin: 0.4rem 0 0;
+  min-height: 1rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.quick-add-message.is-error {
+  color: var(--danger);
+}
+
+.quick-add-message.is-success {
+  color: #2d6f47;
+}
+
 .search-wrap input:focus-visible,
+.quick-add-form input:focus-visible,
 .qty-button:focus-visible,
 .step-button:focus-visible,
 .settings-view input:focus-visible,
