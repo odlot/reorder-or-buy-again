@@ -42,9 +42,9 @@ Milestones A, B, and C are implemented:
 
 - Foundation inventory model with starter household items
 - All-items view with search and urgency sorting
-- Fast quantity controls (`-`, `+`, tap quantity to set)
+- Fast quantity controls (`-`, `+`, inline quantity edit)
 - Quick add from main view (no Settings navigation required)
-- Remove items directly from main list (with confirmation)
+- Remove items directly from main list (with undo)
 - Bottom navigation (`All`, `Restock`, `Settings`) with low-stock badge
 - Dedicated Restock view (low-stock items only)
 - Settings: default threshold, backup import/export, reset local data

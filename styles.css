@@ -105,7 +105,7 @@ body {
 
 .search-wrap input:focus-visible,
 .quick-add-form input:focus-visible,
-.qty-button:focus-visible,
+.qty-input:focus-visible,
 .step-button:focus-visible,
 .remove-button:focus-visible,
 .settings-view input:focus-visible,
@@ -175,7 +175,6 @@ body {
 }
 
 .step-button,
-.qty-button,
 .remove-button {
   border: 1px solid var(--line);
   border-radius: 0.75rem;
@@ -194,16 +193,24 @@ body {
   color: var(--danger);
 }
 
-.qty-button {
-  cursor: pointer;
-  font-weight: 600;
-}
-
 .remove-button {
   cursor: pointer;
   color: var(--danger);
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.qty-input {
+  width: 100%;
+  min-height: 2.9rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: #fff;
+  color: var(--text);
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0 0.3rem;
 }
 
 .empty-state {
@@ -304,6 +311,46 @@ body {
 
 .settings-message.is-success {
   color: #2d6f47;
+}
+
+.undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(5.2rem + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(92vw, 32rem);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  border: 1px solid #d8dfd0;
+  border-radius: 0.85rem;
+  background: #fefefb;
+  box-shadow: 0 8px 26px #00000014;
+  padding: 0.7rem 0.8rem;
+  z-index: 40;
+}
+
+.undo-toast span {
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.undo-button {
+  min-height: 2.1rem;
+  border: 1px solid #c8d9c9;
+  border-radius: 0.65rem;
+  background: #ecf7ee;
+  color: #2f6c48;
+  font-weight: 700;
+  font-size: 0.84rem;
+  padding: 0 0.65rem;
+  cursor: pointer;
+}
+
+.undo-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .bottom-nav {
