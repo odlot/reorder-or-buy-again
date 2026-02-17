@@ -31,10 +31,9 @@ export function renderList(container, items) {
             </button>
             <input
               class="qty-input"
-              type="number"
+              type="text"
               inputmode="numeric"
-              min="0"
-              step="1"
+              pattern="[0-9]*"
               value="${item.quantity}"
               aria-label="Quantity for ${safeName}"
             />
