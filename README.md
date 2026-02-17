@@ -23,6 +23,7 @@ Run the same validation locally that CI runs:
 ```
 
 This runs:
+
 - JavaScript syntax checks for `src/*.js` and `tests/*.test.js`
 - Node test suite via `node --test`
 
