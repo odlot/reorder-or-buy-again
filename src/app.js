@@ -5,6 +5,7 @@ import {
 } from "./logic.js";
 import {
   loadState,
+  normalizeState,
   saveState,
   updateItemQuantity,
   upsertItem,
@@ -26,6 +27,23 @@ const VIEWS = {
 };
 const DELETE_UNDO_MS = 8000;
 const VIEWPORT_OFFSET_VAR = "--viewport-offset-bottom";
+const AUTO_SYNC_DELAY_MS = 900;
+const SYNC_SCHEMA_VERSION = 1;
+const SYNC_STRATEGY = "last-write-wins-full";
+const SYNC_STATUS = {
+  OFFLINE: "offline",
+  SYNCING: "syncing",
+  SYNCED: "synced",
+  CONFLICT: "conflict",
+};
+const STATUS_LABELS = {
+  [SYNC_STATUS.OFFLINE]: "Offline",
+  [SYNC_STATUS.SYNCING]: "Syncing",
+  [SYNC_STATUS.SYNCED]: "Synced",
+  [SYNC_STATUS.CONFLICT]: "Conflict",
+};
+const supportsOfflineFileSync =
+  typeof window.showSaveFilePicker === "function";
 
 const VALID_VIEWS = new Set(Object.values(VIEWS));
 
@@ -33,6 +51,7 @@ const searchInput = document.querySelector("#search-input");
 const quickAddForm = document.querySelector("#quick-add-form");
 const quickAddNameInput = document.querySelector("#quick-add-name");
 const quickAddMessage = document.querySelector("#quick-add-message");
+const syncStatusChip = document.querySelector("#sync-status-chip");
 const listToolbar = document.querySelector("#list-toolbar");
 const inventoryView = document.querySelector("#inventory-view");
 const settingsView = document.querySelector("#settings-view");
@@ -46,6 +65,10 @@ const undoMessage = document.querySelector("#undo-message");
 const undoButton = document.querySelector("#undo-button");
 
 const defaultThresholdInput = document.querySelector("#default-threshold-input");
+const syncStatusDetail = document.querySelector("#sync-status-detail");
+const syncLastSynced = document.querySelector("#sync-last-synced");
+const linkSyncButton = document.querySelector("#link-sync-button");
+const syncNowButton = document.querySelector("#sync-now-button");
 const settingsMessage = document.querySelector("#settings-message");
 const exportDataButton = document.querySelector("#export-data-button");
 const importDataInput = document.querySelector("#import-data-input");
@@ -55,6 +78,7 @@ const initialState = loadState();
 const state = {
   items: initialState.items,
   settings: initialState.settings,
+  updatedAt: initialState.updatedAt || new Date().toISOString(),
   query: "",
   activeView: VIEWS.ALL,
   quickAddNotice: {
@@ -66,6 +90,17 @@ const state = {
     tone: "",
   },
   pendingDelete: null,
+  sync: {
+    status: SYNC_STATUS.OFFLINE,
+    detail: supportsOfflineFileSync
+      ? "Local only. Link a file to sync snapshots."
+      : "Offline. This browser does not support file sync.",
+    fileHandle: null,
+    autoSyncTimerId: null,
+    isSyncing: false,
+    conflictRemoteSnapshot: null,
+    lastSyncedAt: "",
+  },
 };
 
 function getVisibleItems() {
@@ -98,6 +133,363 @@ function updateViewportOffsetBottom() {
     window.innerHeight - (viewport.height + viewport.offsetTop)
   );
   root.style.setProperty(VIEWPORT_OFFSET_VAR, `${keyboardHeight}px`);
+}
+
+function parseTimestamp(value) {
+  const parsed = Date.parse(String(value || ""));
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function formatSyncTime(value) {
+  const timestamp = parseTimestamp(value);
+  if (!timestamp) {
+    return "";
+  }
+
+  return new Date(timestamp).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function snapshotFromState() {
+  return {
+    items: state.items,
+    settings: state.settings,
+    updatedAt: state.updatedAt || new Date().toISOString(),
+  };
+}
+
+function snapshotHash(snapshot) {
+  return JSON.stringify({
+    items: snapshot.items,
+    settings: snapshot.settings,
+  });
+}
+
+function setSyncStatus(status, detail = "") {
+  state.sync.status = status;
+  state.sync.detail = detail;
+}
+
+function renderSyncStatus() {
+  if (
+    !syncStatusChip ||
+    !syncStatusDetail ||
+    !syncLastSynced ||
+    !linkSyncButton ||
+    !syncNowButton
+  ) {
+    return;
+  }
+
+  syncStatusChip.textContent = STATUS_LABELS[state.sync.status];
+  syncStatusChip.classList.remove(
+    "is-synced",
+    "is-syncing",
+    "is-offline",
+    "is-conflict"
+  );
+  syncStatusChip.classList.add(`is-${state.sync.status}`);
+
+  syncStatusDetail.textContent = state.sync.detail;
+  const formattedLastSynced = formatSyncTime(state.sync.lastSyncedAt);
+  syncLastSynced.textContent = formattedLastSynced
+    ? `Last synced: ${formattedLastSynced}`
+    : "Last synced: never";
+  syncNowButton.disabled = !state.sync.fileHandle || state.sync.isSyncing;
+  syncNowButton.textContent =
+    state.sync.status === SYNC_STATUS.CONFLICT ? "Resolve Conflict" : "Sync Now";
+
+  if (!supportsOfflineFileSync) {
+    linkSyncButton.disabled = true;
+    linkSyncButton.textContent = "Unsupported";
+    return;
+  }
+
+  linkSyncButton.disabled = state.sync.isSyncing;
+  linkSyncButton.textContent = state.sync.fileHandle
+    ? "Re-link Sync File"
+    : "Link Sync File";
+}
+
+function buildSyncFilePayload(snapshot) {
+  return JSON.stringify(
+    {
+      schemaVersion: SYNC_SCHEMA_VERSION,
+      strategy: SYNC_STRATEGY,
+      updatedAt: snapshot.updatedAt,
+      state: {
+        items: snapshot.items,
+        settings: snapshot.settings,
+        updatedAt: snapshot.updatedAt,
+      },
+    },
+    null,
+    2
+  );
+}
+
+function parseSyncFilePayload(rawText) {
+  const text = String(rawText || "").trim();
+  if (!text) {
+    return null;
+  }
+
+  let parsed = null;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("Sync file is not valid JSON.");
+  }
+
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    parsed.state &&
+    Array.isArray(parsed.state.items)
+  ) {
+    return normalizeState(parsed.state);
+  }
+
+  if (parsed && typeof parsed === "object" && Array.isArray(parsed.items)) {
+    return normalizeState(parsed);
+  }
+
+  throw new Error("Sync file must contain a valid inventory snapshot.");
+}
+
+async function readSnapshotFromLinkedFile() {
+  if (!state.sync.fileHandle) {
+    return null;
+  }
+
+  const file = await state.sync.fileHandle.getFile();
+  const text = await file.text();
+  return parseSyncFilePayload(text);
+}
+
+async function writeSnapshotToLinkedFile(snapshot) {
+  if (!state.sync.fileHandle) {
+    return;
+  }
+
+  const writable = await state.sync.fileHandle.createWritable();
+  await writable.write(buildSyncFilePayload(snapshot));
+  await writable.close();
+  state.sync.lastSyncedAt = snapshot.updatedAt;
+}
+
+function adoptSnapshot(snapshot) {
+  clearPendingDelete();
+  state.items = snapshot.items;
+  state.settings = snapshot.settings;
+  state.updatedAt = snapshot.updatedAt || new Date().toISOString();
+  saveState({
+    items: state.items,
+    settings: state.settings,
+    updatedAt: state.updatedAt,
+  });
+}
+
+function mergeSnapshotsByUpdatedAt(localSnapshot, remoteSnapshot) {
+  const localMap = new Map(localSnapshot.items.map((item) => [item.id, item]));
+  const remoteMap = new Map(remoteSnapshot.items.map((item) => [item.id, item]));
+  const mergedItems = [];
+  const allIds = new Set([...localMap.keys(), ...remoteMap.keys()]);
+
+  for (const id of allIds) {
+    const localItem = localMap.get(id);
+    const remoteItem = remoteMap.get(id);
+
+    if (!localItem) {
+      mergedItems.push(remoteItem);
+      continue;
+    }
+
+    if (!remoteItem) {
+      mergedItems.push(localItem);
+      continue;
+    }
+
+    const localTime = parseTimestamp(localItem.updatedAt);
+    const remoteTime = parseTimestamp(remoteItem.updatedAt);
+    mergedItems.push(localTime >= remoteTime ? localItem : remoteItem);
+  }
+
+  const localSnapshotTime = parseTimestamp(localSnapshot.updatedAt);
+  const remoteSnapshotTime = parseTimestamp(remoteSnapshot.updatedAt);
+  const mergedSettings =
+    localSnapshotTime >= remoteSnapshotTime
+      ? localSnapshot.settings
+      : remoteSnapshot.settings;
+
+  return normalizeState({
+    items: mergedItems,
+    settings: mergedSettings,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+function queueAutoSyncToFile() {
+  if (!state.sync.fileHandle || state.sync.status === SYNC_STATUS.CONFLICT) {
+    return;
+  }
+
+  if (state.sync.autoSyncTimerId) {
+    clearTimeout(state.sync.autoSyncTimerId);
+  }
+
+  state.sync.autoSyncTimerId = setTimeout(() => {
+    state.sync.autoSyncTimerId = null;
+    void syncWithLinkedFile();
+  }, AUTO_SYNC_DELAY_MS);
+}
+
+async function syncWithLinkedFile() {
+  if (!state.sync.fileHandle) {
+    setSyncStatus(
+      SYNC_STATUS.OFFLINE,
+      "Local only. Link a file to sync snapshots."
+    );
+    render();
+    return;
+  }
+
+  if (state.sync.isSyncing) {
+    return;
+  }
+
+  state.sync.isSyncing = true;
+  setSyncStatus(SYNC_STATUS.SYNCING, "Syncing local snapshot...");
+  render();
+
+  try {
+    if (state.sync.conflictRemoteSnapshot) {
+      const mergedSnapshot = mergeSnapshotsByUpdatedAt(
+        snapshotFromState(),
+        state.sync.conflictRemoteSnapshot
+      );
+
+      adoptSnapshot(mergedSnapshot);
+      await writeSnapshotToLinkedFile(mergedSnapshot);
+      state.sync.conflictRemoteSnapshot = null;
+      setSyncStatus(
+        SYNC_STATUS.SYNCED,
+        `Synced ${formatSyncTime(mergedSnapshot.updatedAt)} (merged conflict)`
+      );
+      setSettingsNotice("Conflict merged and synced.", "success");
+      render();
+      return;
+    }
+
+    const localSnapshot = snapshotFromState();
+    const localHash = snapshotHash(localSnapshot);
+    const remoteSnapshot = await readSnapshotFromLinkedFile();
+
+    if (!remoteSnapshot) {
+      await writeSnapshotToLinkedFile(localSnapshot);
+      setSyncStatus(
+        SYNC_STATUS.SYNCED,
+        `Synced ${formatSyncTime(localSnapshot.updatedAt)}`
+      );
+      render();
+      return;
+    }
+
+    const remoteHash = snapshotHash(remoteSnapshot);
+    if (localHash === remoteHash) {
+      const latestTimestamp =
+        parseTimestamp(remoteSnapshot.updatedAt) > parseTimestamp(localSnapshot.updatedAt)
+          ? remoteSnapshot.updatedAt
+          : localSnapshot.updatedAt;
+      state.sync.lastSyncedAt = latestTimestamp;
+      setSyncStatus(
+        SYNC_STATUS.SYNCED,
+        `Synced ${formatSyncTime(latestTimestamp)}`
+      );
+      render();
+      return;
+    }
+
+    const localTime = parseTimestamp(localSnapshot.updatedAt);
+    const remoteTime = parseTimestamp(remoteSnapshot.updatedAt);
+
+    if (localTime > remoteTime) {
+      await writeSnapshotToLinkedFile(localSnapshot);
+      setSyncStatus(
+        SYNC_STATUS.SYNCED,
+        `Synced ${formatSyncTime(localSnapshot.updatedAt)}`
+      );
+      render();
+      return;
+    }
+
+    if (remoteTime > localTime) {
+      adoptSnapshot(remoteSnapshot);
+      state.sync.lastSyncedAt = remoteSnapshot.updatedAt;
+      setSyncStatus(
+        SYNC_STATUS.SYNCED,
+        `Synced ${formatSyncTime(remoteSnapshot.updatedAt)}`
+      );
+      setSettingsNotice("Applied newer snapshot from sync file.", "success");
+      render();
+      return;
+    }
+
+    state.sync.conflictRemoteSnapshot = remoteSnapshot;
+    setSyncStatus(
+      SYNC_STATUS.CONFLICT,
+      "Conflict detected. Tap Resolve Conflict to merge by item updates."
+    );
+    setSettingsNotice("Conflict detected between local and file snapshots.", "error");
+    render();
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to sync with file.";
+    setSyncStatus(SYNC_STATUS.OFFLINE, "Sync failed. Re-link sync file.");
+    setSettingsNotice(message, "error");
+    render();
+  } finally {
+    state.sync.isSyncing = false;
+    render();
+  }
+}
+
+async function linkSyncFile() {
+  if (!supportsOfflineFileSync) {
+    setSettingsNotice("Offline file sync is not supported in this browser.", "error");
+    render();
+    return;
+  }
+
+  try {
+    const fileHandle = await window.showSaveFilePicker({
+      suggestedName: "inventory-sync.json",
+      types: [
+        {
+          description: "Inventory Sync JSON",
+          accept: {
+            "application/json": [".json"],
+          },
+        },
+      ],
+    });
+
+    state.sync.fileHandle = fileHandle;
+    state.sync.conflictRemoteSnapshot = null;
+    setSettingsNotice("Sync file linked.", "success");
+    await syncWithLinkedFile();
+  } catch (error) {
+    if (error && typeof error === "object" && error.name === "AbortError") {
+      return;
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Failed to link sync file.";
+    setSettingsNotice(message, "error");
+    render();
+  }
 }
 
 function clearPendingDelete() {
@@ -191,6 +583,7 @@ function render() {
     "is-success",
     state.quickAddNotice.tone === "success"
   );
+  renderSyncStatus();
 
   if (state.pendingDelete) {
     undoMessage.textContent = `"${state.pendingDelete.item.name}" removed.`;
@@ -207,11 +600,20 @@ function render() {
   renderInventoryPanel(visibleItems, lowCount);
 }
 
-function persistAndRender() {
+function persistAndRender({ touchUpdatedAt = true, queueSync = true } = {}) {
+  if (touchUpdatedAt) {
+    state.updatedAt = new Date().toISOString();
+  }
+
   saveState({
     items: state.items,
     settings: state.settings,
+    updatedAt: state.updatedAt,
   });
+
+  if (queueSync) {
+    queueAutoSyncToFile();
+  }
   render();
 }
 
@@ -396,8 +798,9 @@ async function importBackupFile(file) {
     clearPendingDelete();
     state.items = imported.items;
     state.settings = imported.settings;
+    state.updatedAt = imported.updatedAt || new Date().toISOString();
     setSettingsNotice("Backup imported successfully.", "success");
-    persistAndRender();
+    persistAndRender({ touchUpdatedAt: false });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to import backup.";
@@ -418,10 +821,11 @@ function resetLocalData() {
   clearPendingDelete();
   state.items = defaults.items;
   state.settings = defaults.settings;
+  state.updatedAt = defaults.updatedAt || new Date().toISOString();
   state.query = "";
   searchInput.value = "";
   setSettingsNotice("Local data reset to starter defaults.", "success");
-  persistAndRender();
+  persistAndRender({ touchUpdatedAt: false });
 }
 
 searchInput.addEventListener("input", (event) => {
@@ -452,6 +856,14 @@ importDataInput.addEventListener("change", async (event) => {
 
 resetDataButton.addEventListener("click", () => {
   resetLocalData();
+});
+
+linkSyncButton.addEventListener("click", () => {
+  void linkSyncFile();
+});
+
+syncNowButton.addEventListener("click", () => {
+  void syncWithLinkedFile();
 });
 
 navTabs.forEach((tab) => {

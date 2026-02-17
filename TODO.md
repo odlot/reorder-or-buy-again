@@ -68,11 +68,24 @@
 - [x] Playwright e2e tests for add/edit/delete/restock interactions.
 - [x] Test multi-view behavior and persisted state.
 
+### 10. Offline Cross-Device Sync (No Backend)
+
+- [x] Add optional linked sync file workflow in Settings.
+- [x] Add sync status chip (`Synced`, `Syncing`, `Offline`, `Conflict`).
+- [x] Add last-write-wins full-snapshot sync with timestamp metadata.
+- [x] Add conflict resolution merge using per-item `updatedAt`.
+- [x] Add tiny "Last synced" timestamp in Settings.
+- [x] Add automated e2e coverage for file-sync behavior and remote snapshot pulls.
+- [ ] Persist and restore file-handle permission across sessions where supported.
+- [ ] Add automated tests for explicit same-timestamp conflict resolution path.
+- [ ] Evaluate whether `Settings` should include a "clear sync link" action.
+
 ## Suggested Implementation Order
 
 - [x] Milestone A: Foundation + All Items + Fast Quantity Controls.
 - [x] Milestone B: Low-stock logic + Restock view + nav badge.
 - [x] Milestone C: Settings + persistence hardening + tests.
+- [ ] Milestone D: Offline file sync polish + sync conflict tests.
 
 ## MVP Definition
 

@@ -70,9 +70,11 @@ function createDefaultSettings() {
 }
 
 export function createDefaultState() {
+  const now = new Date().toISOString();
   return {
     items: cloneStarterItems(),
     settings: createDefaultSettings(),
+    updatedAt: now,
   };
 }
 
@@ -145,8 +147,9 @@ export function normalizeState(candidateState) {
       .map((item) => normalizeItem(item, settings))
       .filter(Boolean)
   );
+  const updatedAt = String(candidateState.updatedAt || new Date().toISOString());
 
-  return { items, settings };
+  return { items, settings, updatedAt };
 }
 
 function parseJson(raw) {
@@ -183,7 +186,7 @@ export function saveState(state, storage = globalThis.localStorage) {
   const snapshot = {
     items: normalized.items,
     settings: normalized.settings,
-    updatedAt: new Date().toISOString(),
+    updatedAt: String(normalized.updatedAt || new Date().toISOString()),
   };
 
   storage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
@@ -240,6 +243,7 @@ export function serializeState(state) {
     {
       items: normalized.items,
       settings: normalized.settings,
+      updatedAt: normalized.updatedAt,
       exportedAt: new Date().toISOString(),
     },
     null,

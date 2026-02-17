@@ -11,6 +11,9 @@
       <header class="app-header">
         <h1>Inventory</h1>
         <p class="subtitle">Quickly track household essentials.</p>
+        <p id="sync-status-chip" class="sync-chip is-offline" aria-live="polite">
+          Offline
+        </p>
       </header>
 
       <section id="list-toolbar" class="toolbar" aria-label="Filters and summary">
@@ -67,6 +70,28 @@
             step="1"
           />
         </div>
+
+        <section class="settings-group">
+          <h3>Offline Sync File</h3>
+          <p id="sync-status-detail" class="sync-status-detail">
+            Local only. Link a file to sync snapshots.
+          </p>
+          <p id="sync-last-synced" class="sync-last-synced">
+            Last synced: never
+          </p>
+          <div class="settings-actions sync-actions">
+            <button id="link-sync-button" class="action-button" type="button">
+              Link Sync File
+            </button>
+            <button
+              id="sync-now-button"
+              class="action-button primary-button"
+              type="button"
+            >
+              Sync Now
+            </button>
+          </div>
+        </section>
 
         <section class="settings-actions">
           <button id="export-data-button" class="action-button" type="button">
