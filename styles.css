@@ -355,6 +355,12 @@ body {
   font-size: 0.84rem;
 }
 
+.sync-last-synced {
+  margin: 0;
+  color: #7a857a;
+  font-size: 0.76rem;
+}
+
 .settings-message.is-error {
   color: var(--danger);
 }

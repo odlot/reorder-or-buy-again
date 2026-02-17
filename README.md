@@ -60,6 +60,28 @@ After that, every push to `main` runs validation, e2e, and then deploys the stat
   - `Syncing`: file sync in progress.
   - `Offline`: local-only mode (no file linked / unsupported browser).
   - `Conflict`: same-timestamp mismatch detected; resolve via `Sync Now`.
+- Settings also shows a tiny `Last synced` timestamp (`never` until first successful sync).
+
+### Sync E2E Coverage
+
+- Offline sync behavior is tested end-to-end in `tests/e2e/offline-sync.spec.js`.
+- The e2e test uses a deterministic mock for the file picker API so CI can validate sync logic consistently.
+- This verifies:
+  - writing local changes to the linked sync file
+  - pulling newer snapshots from the linked sync file
+
+### Browser Support (Transparent Expectations)
+
+- Core app features (`localStorage`, inventory editing): broadly supported on modern browsers.
+- Offline sync file mode requires `window.showSaveFilePicker` (File System Access API).
+- As of February 17, 2026:
+  - Supported (offline sync mode): Chromium-based desktop browsers (for example Chrome, Edge, Opera).
+  - Not supported (offline sync mode): Firefox and Safari (including iOS Safari).
+  - Mobile browser support for this API is inconsistent; treat offline sync mode as unsupported unless verified on the specific device/browser.
+- If unsupported, the app explicitly stays in `Offline` state and continues to persist locally.
+- Sources:
+  - MDN: https://developer.mozilla.org/en-US/docs/Web/API/Window/showSaveFilePicker
+  - Can I Use: https://caniuse.com/native-filesystem-api
 
 ## Git Hooks
 

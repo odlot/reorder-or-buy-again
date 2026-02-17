@@ -66,6 +66,7 @@ const undoButton = document.querySelector("#undo-button");
 
 const defaultThresholdInput = document.querySelector("#default-threshold-input");
 const syncStatusDetail = document.querySelector("#sync-status-detail");
+const syncLastSynced = document.querySelector("#sync-last-synced");
 const linkSyncButton = document.querySelector("#link-sync-button");
 const syncNowButton = document.querySelector("#sync-now-button");
 const settingsMessage = document.querySelector("#settings-message");
@@ -175,6 +176,7 @@ function renderSyncStatus() {
   if (
     !syncStatusChip ||
     !syncStatusDetail ||
+    !syncLastSynced ||
     !linkSyncButton ||
     !syncNowButton
   ) {
@@ -191,6 +193,10 @@ function renderSyncStatus() {
   syncStatusChip.classList.add(`is-${state.sync.status}`);
 
   syncStatusDetail.textContent = state.sync.detail;
+  const formattedLastSynced = formatSyncTime(state.sync.lastSyncedAt);
+  syncLastSynced.textContent = formattedLastSynced
+    ? `Last synced: ${formattedLastSynced}`
+    : "Last synced: never";
   syncNowButton.disabled = !state.sync.fileHandle || state.sync.isSyncing;
   syncNowButton.textContent =
     state.sync.status === SYNC_STATUS.CONFLICT ? "Resolve Conflict" : "Sync Now";
