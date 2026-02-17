@@ -107,6 +107,7 @@ body {
 .quick-add-form input:focus-visible,
 .qty-button:focus-visible,
 .step-button:focus-visible,
+.remove-button:focus-visible,
 .settings-view input:focus-visible,
 .action-button:focus-visible,
 .settings-item-button:focus-visible {
@@ -169,13 +170,14 @@ body {
 
 .controls {
   display: inline-grid;
-  grid-template-columns: 3rem 3.3rem 3rem;
+  grid-template-columns: 2.75rem 3.1rem 2.75rem 2.75rem;
   gap: 0.35rem;
   align-items: center;
 }
 
 .step-button,
-.qty-button {
+.qty-button,
+.remove-button {
   border: 1px solid var(--line);
   border-radius: 0.75rem;
   background: #fff;
@@ -196,6 +198,13 @@ body {
 .qty-button {
   cursor: pointer;
   font-weight: 600;
+}
+
+.remove-button {
+  cursor: pointer;
+  color: var(--danger);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .empty-state {

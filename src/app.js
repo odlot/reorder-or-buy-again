@@ -316,7 +316,7 @@ function editItem(itemId) {
   persistAndRender();
 }
 
-function deleteItemById(itemId) {
+function deleteItemById(itemId, source = "settings") {
   const item = state.items.find((entry) => entry.id === itemId);
   if (!item) {
     return;
@@ -328,7 +328,15 @@ function deleteItemById(itemId) {
   }
 
   state.items = removeItem(state.items, itemId);
-  setSettingsNotice(`Deleted ${item.name}.`, "success");
+
+  if (source === "main") {
+    setQuickAddNotice(`Deleted ${item.name}.`, "success");
+    setSettingsNotice("", "");
+  } else {
+    setSettingsNotice(`Deleted ${item.name}.`, "success");
+    setQuickAddNotice("", "");
+  }
+
   persistAndRender();
 }
 
@@ -434,7 +442,7 @@ settingsItemList.addEventListener("click", (event) => {
   }
 
   if (button.dataset.action === "delete-item") {
-    deleteItemById(itemId);
+    deleteItemById(itemId, "settings");
   }
 });
 
@@ -504,6 +512,11 @@ itemList.addEventListener("click", (event) => {
     }
 
     setQuantity(itemId, clampQuantity(userValue));
+    return;
+  }
+
+  if (action === "delete") {
+    deleteItemById(itemId, "main");
   }
 });
 
