@@ -13,7 +13,7 @@
         <p class="subtitle">Quickly track household essentials.</p>
       </header>
 
-      <section class="toolbar" aria-label="Filters and summary">
+      <section id="list-toolbar" class="toolbar" aria-label="Filters and summary">
         <label class="search-wrap" for="search-input">
           <span class="sr-only">Search inventory</span>
           <input
@@ -27,12 +27,41 @@
         <p id="summary-line" class="summary-line" aria-live="polite"></p>
       </section>
 
-      <section aria-label="All items">
+      <section id="inventory-view" aria-label="Inventory items">
         <ul id="item-list" class="item-list"></ul>
         <p id="empty-state" class="empty-state hidden">
           No items match your search.
         </p>
       </section>
+
+      <section
+        id="settings-view"
+        class="settings-view hidden"
+        aria-label="Settings"
+      >
+        <h2>Settings</h2>
+        <p class="settings-copy">
+          Settings will be expanded in the next milestone.
+        </p>
+      </section>
+
+      <nav class="bottom-nav" aria-label="Primary navigation">
+        <button
+          class="nav-tab is-active"
+          type="button"
+          data-view="all"
+          aria-current="page"
+        >
+          All
+        </button>
+        <button class="nav-tab" type="button" data-view="restock">
+          Restock
+          <span id="restock-badge" class="badge hidden" aria-live="polite">0</span>
+        </button>
+        <button class="nav-tab" type="button" data-view="settings">
+          Settings
+        </button>
+      </nav>
     </main>
 
     <script type="module" src="./src/app.js"></script>
