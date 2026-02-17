@@ -30,6 +30,9 @@ const VIEWPORT_OFFSET_VAR = "--viewport-offset-bottom";
 const AUTO_SYNC_DELAY_MS = 900;
 const SYNC_SCHEMA_VERSION = 1;
 const SYNC_STRATEGY = "last-write-wins-full";
+const SYNC_HANDLE_DB_NAME = "reorder-or-buy-again.sync";
+const SYNC_HANDLE_STORE_NAME = "handles";
+const SYNC_HANDLE_RECORD_KEY = "active";
 const SYNC_STATUS = {
   OFFLINE: "offline",
   SYNCING: "syncing",
@@ -44,6 +47,8 @@ const STATUS_LABELS = {
 };
 const supportsOfflineFileSync =
   typeof window.showSaveFilePicker === "function";
+const supportsPersistentSyncHandleStore =
+  typeof window.indexedDB !== "undefined";
 
 const VALID_VIEWS = new Set(Object.values(VIEWS));
 
@@ -69,6 +74,7 @@ const syncStatusDetail = document.querySelector("#sync-status-detail");
 const syncLastSynced = document.querySelector("#sync-last-synced");
 const linkSyncButton = document.querySelector("#link-sync-button");
 const syncNowButton = document.querySelector("#sync-now-button");
+const clearSyncLinkButton = document.querySelector("#clear-sync-link-button");
 const settingsMessage = document.querySelector("#settings-message");
 const exportDataButton = document.querySelector("#export-data-button");
 const importDataInput = document.querySelector("#import-data-input");
@@ -98,6 +104,7 @@ const state = {
     fileHandle: null,
     autoSyncTimerId: null,
     isSyncing: false,
+    autoSyncEnabled: false,
     conflictRemoteSnapshot: null,
     lastSyncedAt: "",
   },
@@ -117,6 +124,113 @@ function setSettingsNotice(text, tone = "") {
 
 function setQuickAddNotice(text, tone = "") {
   state.quickAddNotice = { text, tone };
+}
+
+function isAbortError(error) {
+  return Boolean(
+    error && typeof error === "object" && error.name === "AbortError"
+  );
+}
+
+function isPermissionError(error) {
+  return Boolean(
+    error && typeof error === "object" && error.name === "NotAllowedError"
+  );
+}
+
+function openSyncHandleDb() {
+  return new Promise((resolve, reject) => {
+    if (!supportsPersistentSyncHandleStore) {
+      resolve(null);
+      return;
+    }
+
+    const request = window.indexedDB.open(SYNC_HANDLE_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(SYNC_HANDLE_STORE_NAME)) {
+        db.createObjectStore(SYNC_HANDLE_STORE_NAME);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("Failed to open sync handle storage."));
+  });
+}
+
+async function loadStoredSyncHandle() {
+  const db = await openSyncHandleDb();
+  if (!db) {
+    return null;
+  }
+
+  try {
+    const handle = await new Promise((resolve, reject) => {
+      const transaction = db.transaction(SYNC_HANDLE_STORE_NAME, "readonly");
+      const request = transaction
+        .objectStore(SYNC_HANDLE_STORE_NAME)
+        .get(SYNC_HANDLE_RECORD_KEY);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () =>
+        reject(request.error || new Error("Failed to load sync handle."));
+    });
+
+    return handle;
+  } finally {
+    db.close();
+  }
+}
+
+async function saveSyncHandleToStorage(handle) {
+  const db = await openSyncHandleDb();
+  if (!db) {
+    return;
+  }
+
+  try {
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction(SYNC_HANDLE_STORE_NAME, "readwrite");
+      transaction.objectStore(SYNC_HANDLE_STORE_NAME).put(
+        handle,
+        SYNC_HANDLE_RECORD_KEY
+      );
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () =>
+        reject(transaction.error || new Error("Failed to persist sync handle."));
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function clearStoredSyncHandle() {
+  const db = await openSyncHandleDb();
+  if (!db) {
+    return;
+  }
+
+  try {
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction(SYNC_HANDLE_STORE_NAME, "readwrite");
+      transaction.objectStore(SYNC_HANDLE_STORE_NAME).delete(SYNC_HANDLE_RECORD_KEY);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () =>
+        reject(transaction.error || new Error("Failed to clear sync handle."));
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function querySyncHandlePermission(handle) {
+  if (!handle || typeof handle.queryPermission !== "function") {
+    return "granted";
+  }
+
+  try {
+    return await handle.queryPermission({ mode: "readwrite" });
+  } catch {
+    return "prompt";
+  }
 }
 
 function updateViewportOffsetBottom() {
@@ -178,7 +292,8 @@ function renderSyncStatus() {
     !syncStatusDetail ||
     !syncLastSynced ||
     !linkSyncButton ||
-    !syncNowButton
+    !syncNowButton ||
+    !clearSyncLinkButton
   ) {
     return;
   }
@@ -200,10 +315,12 @@ function renderSyncStatus() {
   syncNowButton.disabled = !state.sync.fileHandle || state.sync.isSyncing;
   syncNowButton.textContent =
     state.sync.status === SYNC_STATUS.CONFLICT ? "Resolve Conflict" : "Sync Now";
+  clearSyncLinkButton.disabled = !state.sync.fileHandle || state.sync.isSyncing;
 
   if (!supportsOfflineFileSync) {
     linkSyncButton.disabled = true;
     linkSyncButton.textContent = "Unsupported";
+    clearSyncLinkButton.disabled = true;
     return;
   }
 
@@ -331,14 +448,25 @@ function mergeSnapshotsByUpdatedAt(localSnapshot, remoteSnapshot) {
   });
 }
 
-function queueAutoSyncToFile() {
-  if (!state.sync.fileHandle || state.sync.status === SYNC_STATUS.CONFLICT) {
+function clearAutoSyncTimer() {
+  if (!state.sync.autoSyncTimerId) {
     return;
   }
 
-  if (state.sync.autoSyncTimerId) {
-    clearTimeout(state.sync.autoSyncTimerId);
+  clearTimeout(state.sync.autoSyncTimerId);
+  state.sync.autoSyncTimerId = null;
+}
+
+function queueAutoSyncToFile() {
+  if (
+    !state.sync.fileHandle ||
+    !state.sync.autoSyncEnabled ||
+    state.sync.status === SYNC_STATUS.CONFLICT
+  ) {
+    return;
   }
+
+  clearAutoSyncTimer();
 
   state.sync.autoSyncTimerId = setTimeout(() => {
     state.sync.autoSyncTimerId = null;
@@ -373,6 +501,7 @@ async function syncWithLinkedFile() {
 
       adoptSnapshot(mergedSnapshot);
       await writeSnapshotToLinkedFile(mergedSnapshot);
+      state.sync.autoSyncEnabled = true;
       state.sync.conflictRemoteSnapshot = null;
       setSyncStatus(
         SYNC_STATUS.SYNCED,
@@ -389,6 +518,7 @@ async function syncWithLinkedFile() {
 
     if (!remoteSnapshot) {
       await writeSnapshotToLinkedFile(localSnapshot);
+      state.sync.autoSyncEnabled = true;
       setSyncStatus(
         SYNC_STATUS.SYNCED,
         `Synced ${formatSyncTime(localSnapshot.updatedAt)}`
@@ -408,6 +538,7 @@ async function syncWithLinkedFile() {
         SYNC_STATUS.SYNCED,
         `Synced ${formatSyncTime(latestTimestamp)}`
       );
+      state.sync.autoSyncEnabled = true;
       render();
       return;
     }
@@ -417,6 +548,7 @@ async function syncWithLinkedFile() {
 
     if (localTime > remoteTime) {
       await writeSnapshotToLinkedFile(localSnapshot);
+      state.sync.autoSyncEnabled = true;
       setSyncStatus(
         SYNC_STATUS.SYNCED,
         `Synced ${formatSyncTime(localSnapshot.updatedAt)}`
@@ -428,6 +560,7 @@ async function syncWithLinkedFile() {
     if (remoteTime > localTime) {
       adoptSnapshot(remoteSnapshot);
       state.sync.lastSyncedAt = remoteSnapshot.updatedAt;
+      state.sync.autoSyncEnabled = true;
       setSyncStatus(
         SYNC_STATUS.SYNCED,
         `Synced ${formatSyncTime(remoteSnapshot.updatedAt)}`
@@ -445,6 +578,17 @@ async function syncWithLinkedFile() {
     setSettingsNotice("Conflict detected between local and file snapshots.", "error");
     render();
   } catch (error) {
+    if (isPermissionError(error)) {
+      state.sync.autoSyncEnabled = false;
+      setSyncStatus(
+        SYNC_STATUS.OFFLINE,
+        "Permission required. Tap Sync Now to re-authorize this file."
+      );
+      setSettingsNotice("Sync permission is required for the linked file.", "error");
+      render();
+      return;
+    }
+
     const message =
       error instanceof Error ? error.message : "Failed to sync with file.";
     setSyncStatus(SYNC_STATUS.OFFLINE, "Sync failed. Re-link sync file.");
@@ -477,17 +621,83 @@ async function linkSyncFile() {
     });
 
     state.sync.fileHandle = fileHandle;
+    state.sync.autoSyncEnabled = true;
     state.sync.conflictRemoteSnapshot = null;
+    try {
+      await saveSyncHandleToStorage(fileHandle);
+    } catch {
+      // Ignore persistence errors (e.g., non-clonable mocked handles in tests).
+    }
     setSettingsNotice("Sync file linked.", "success");
     await syncWithLinkedFile();
   } catch (error) {
-    if (error && typeof error === "object" && error.name === "AbortError") {
+    if (isAbortError(error)) {
       return;
     }
 
     const message =
       error instanceof Error ? error.message : "Failed to link sync file.";
     setSettingsNotice(message, "error");
+    render();
+  }
+}
+
+async function clearSyncLink() {
+  clearAutoSyncTimer();
+  state.sync.fileHandle = null;
+  state.sync.autoSyncEnabled = false;
+  state.sync.conflictRemoteSnapshot = null;
+  state.sync.lastSyncedAt = "";
+  try {
+    await clearStoredSyncHandle();
+  } catch {
+    // Keep clearing in-memory link even if persisted handle cleanup fails.
+  }
+  setSyncStatus(SYNC_STATUS.OFFLINE, "Local only. Link a file to sync snapshots.");
+  setSettingsNotice("Sync link cleared.", "success");
+  render();
+}
+
+async function restoreSyncLinkFromStorage() {
+  if (!supportsOfflineFileSync || !supportsPersistentSyncHandleStore) {
+    return;
+  }
+
+  try {
+    const storedHandle = await loadStoredSyncHandle();
+    if (!storedHandle) {
+      return;
+    }
+
+    if (
+      typeof storedHandle.getFile !== "function" ||
+      typeof storedHandle.createWritable !== "function"
+    ) {
+      await clearStoredSyncHandle();
+      return;
+    }
+
+    state.sync.fileHandle = storedHandle;
+    state.sync.conflictRemoteSnapshot = null;
+
+    const permission = await querySyncHandlePermission(storedHandle);
+    if (permission === "granted") {
+      state.sync.autoSyncEnabled = true;
+      await syncWithLinkedFile();
+      return;
+    }
+
+    state.sync.autoSyncEnabled = false;
+    setSyncStatus(
+      SYNC_STATUS.OFFLINE,
+      "Sync file restored. Tap Sync Now to re-authorize."
+    );
+    render();
+  } catch {
+    setSyncStatus(
+      SYNC_STATUS.OFFLINE,
+      "Local only. Link a file to sync snapshots."
+    );
     render();
   }
 }
@@ -866,6 +1076,10 @@ syncNowButton.addEventListener("click", () => {
   void syncWithLinkedFile();
 });
 
+clearSyncLinkButton.addEventListener("click", () => {
+  void clearSyncLink();
+});
+
 navTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     const { view } = tab.dataset;
@@ -979,3 +1193,4 @@ if (window.visualViewport) {
 
 updateViewportOffsetBottom();
 render();
+void restoreSyncLinkFromStorage();

@@ -76,16 +76,16 @@
 - [x] Add conflict resolution merge using per-item `updatedAt`.
 - [x] Add tiny "Last synced" timestamp in Settings.
 - [x] Add automated e2e coverage for file-sync behavior and remote snapshot pulls.
-- [ ] Persist and restore file-handle permission across sessions where supported.
-- [ ] Add automated tests for explicit same-timestamp conflict resolution path.
-- [ ] Evaluate whether `Settings` should include a "clear sync link" action.
+- [x] Persist and restore file-handle permission across sessions where supported.
+- [x] Add automated tests for explicit same-timestamp conflict resolution path.
+- [x] Add `Clear Sync Link` action in Settings.
 
 ## Suggested Implementation Order
 
 - [x] Milestone A: Foundation + All Items + Fast Quantity Controls.
 - [x] Milestone B: Low-stock logic + Restock view + nav badge.
 - [x] Milestone C: Settings + persistence hardening + tests.
-- [ ] Milestone D: Offline file sync polish + sync conflict tests.
+- [x] Milestone D: Offline file sync polish + sync conflict tests.
 
 ## MVP Definition
 

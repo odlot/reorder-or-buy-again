@@ -67,8 +67,10 @@ After that, every push to `main` runs validation, e2e, and then deploys the stat
 - `localStorage` is isolated per device/browser/profile, so desktop and mobile can diverge.
 - Optional offline file sync is available in `Settings`:
   - `Link Sync File` selects a JSON file on disk.
+  - linked handle is persisted locally and restored on reload where supported.
   - local changes auto-sync to that file (debounced).
   - `Sync Now` forces sync and resolves full-snapshot conflicts.
+  - `Clear Sync Link` removes the linked file handle from this device/browser.
 - Sync status chip meanings:
   - `Synced`: local snapshot and linked file match.
   - `Syncing`: file sync in progress.
@@ -83,6 +85,8 @@ After that, every push to `main` runs validation, e2e, and then deploys the stat
 - This verifies:
   - writing local changes to the linked sync file
   - pulling newer snapshots from the linked sync file
+  - same-timestamp conflict detection + resolve flow
+  - clear-sync-link behavior
 
 ### Browser Support (Transparent Expectations)
 
