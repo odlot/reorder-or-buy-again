@@ -9,6 +9,7 @@
   --low-bg: #fff2dc;
   --low-text: #7a4f16;
   --danger: #ad3e2f;
+  --viewport-offset-bottom: 0px;
 }
 
 *,
@@ -316,7 +317,9 @@ body {
 .undo-toast {
   position: fixed;
   left: 50%;
-  bottom: calc(5.2rem + env(safe-area-inset-bottom));
+  bottom: calc(
+    5.2rem + env(safe-area-inset-bottom) + var(--viewport-offset-bottom)
+  );
   transform: translateX(-50%);
   width: min(92vw, 32rem);
   display: flex;
@@ -433,5 +436,33 @@ body {
 
   .settings-actions {
     grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .item-row {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .controls {
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 380px) {
+  .app-shell {
+    padding-inline: 0.75rem;
+  }
+
+  .quick-add-form {
+    gap: 0.4rem;
+  }
+
+  .search-wrap input,
+  .quick-add-form input,
+  .quick-add-form button {
+    height: 2.65rem;
   }
 }

@@ -25,6 +25,7 @@ const VIEWS = {
   SETTINGS: "settings",
 };
 const DELETE_UNDO_MS = 8000;
+const VIEWPORT_OFFSET_VAR = "--viewport-offset-bottom";
 
 const VALID_VIEWS = new Set(Object.values(VIEWS));
 
@@ -81,6 +82,22 @@ function setSettingsNotice(text, tone = "") {
 
 function setQuickAddNotice(text, tone = "") {
   state.quickAddNotice = { text, tone };
+}
+
+function updateViewportOffsetBottom() {
+  const root = document.documentElement;
+  const viewport = window.visualViewport;
+
+  if (!viewport) {
+    root.style.setProperty(VIEWPORT_OFFSET_VAR, "0px");
+    return;
+  }
+
+  const keyboardHeight = Math.max(
+    0,
+    window.innerHeight - (viewport.height + viewport.offsetTop)
+  );
+  root.style.setProperty(VIEWPORT_OFFSET_VAR, `${keyboardHeight}px`);
 }
 
 function clearPendingDelete() {
@@ -263,6 +280,37 @@ function decodeItemId(rawId) {
   } catch {
     return "";
   }
+}
+
+function commitQuantityFromInput(input, itemId) {
+  const item = state.items.find((entry) => entry.id === itemId);
+  if (!item) {
+    return;
+  }
+
+  const previous = input.dataset.previousValue;
+  const restoreQuantity = () => {
+    if (previous && /^\d+$/.test(previous)) {
+      input.value = String(clampQuantity(previous));
+      return;
+    }
+
+    input.value = String(item.quantity);
+  };
+
+  const raw = input.value.trim();
+  if (!/^\d+$/.test(raw)) {
+    restoreQuantity();
+    return;
+  }
+
+  const nextQuantity = clampQuantity(raw);
+  if (nextQuantity === item.quantity) {
+    input.value = String(item.quantity);
+    return;
+  }
+
+  setQuantity(itemId, nextQuantity);
 }
 
 function deleteItemById(itemId) {
@@ -456,7 +504,7 @@ itemList.addEventListener("click", (event) => {
   }
 });
 
-itemList.addEventListener("change", (event) => {
+itemList.addEventListener("focusout", (event) => {
   const input = event.target.closest(".qty-input");
   if (!input) {
     return;
@@ -472,11 +520,50 @@ itemList.addEventListener("change", (event) => {
     return;
   }
 
-  setQuantity(itemId, clampQuantity(input.value));
+  commitQuantityFromInput(input, itemId);
+  delete input.dataset.previousValue;
+});
+
+itemList.addEventListener("keydown", (event) => {
+  const input = event.target.closest(".qty-input");
+  if (!input) {
+    return;
+  }
+
+  if (event.key === "Enter") {
+    event.preventDefault();
+    input.blur();
+    return;
+  }
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    const previous = input.dataset.previousValue;
+    if (previous) {
+      input.value = previous;
+    }
+    input.blur();
+  }
+});
+
+itemList.addEventListener("focusin", (event) => {
+  const input = event.target.closest(".qty-input");
+  if (!input) {
+    return;
+  }
+
+  input.dataset.previousValue = input.value;
 });
 
 undoButton.addEventListener("click", () => {
   undoDelete();
 });
 
+window.addEventListener("resize", updateViewportOffsetBottom);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", updateViewportOffsetBottom);
+  window.visualViewport.addEventListener("scroll", updateViewportOffsetBottom);
+}
+
+updateViewportOffsetBottom();
 render();
