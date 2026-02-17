@@ -1,6 +1,9 @@
 import { clampQuantity } from "./logic.js";
 
-const STORAGE_KEY = "reorder-or-buy-again.items.v1";
+export const STORAGE_KEY = "reorder-or-buy-again.state";
+export const DEFAULT_SETTINGS = Object.freeze({
+  defaultLowThreshold: 1,
+});
 
 const STARTER_ITEMS = [
   {
@@ -45,45 +48,145 @@ const STARTER_ITEMS = [
   },
 ];
 
-function normalizeItem(item) {
-  const name = String(item.name || "").trim();
+function createId() {
+  if (
+    globalThis.crypto &&
+    typeof globalThis.crypto.randomUUID === "function"
+  ) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `item-${Date.now()}-${Math.floor(Math.random() * 1_000_000_000)}`;
+}
+
+function cloneStarterItems() {
+  return STARTER_ITEMS.map((item) => ({ ...item }));
+}
+
+function createDefaultSettings() {
+  return {
+    defaultLowThreshold: DEFAULT_SETTINGS.defaultLowThreshold,
+  };
+}
+
+export function createDefaultState() {
+  return {
+    items: cloneStarterItems(),
+    settings: createDefaultSettings(),
+  };
+}
+
+function normalizeSettings(settings) {
+  const source = settings && typeof settings === "object" ? settings : {};
+
+  return {
+    defaultLowThreshold: clampQuantity(
+      source.defaultLowThreshold ?? DEFAULT_SETTINGS.defaultLowThreshold
+    ),
+  };
+}
+
+export function normalizeItem(item, settings = DEFAULT_SETTINGS) {
+  const source = item && typeof item === "object" ? item : {};
+  const name = String(source.name || "").trim();
   if (!name) {
     return null;
   }
 
+  const fallbackThreshold = clampQuantity(
+    settings.defaultLowThreshold ?? DEFAULT_SETTINGS.defaultLowThreshold
+  );
+
+  const hasExplicitThreshold =
+    source.lowThreshold !== undefined &&
+    source.lowThreshold !== null &&
+    source.lowThreshold !== "";
+
   return {
-    id: String(item.id || crypto.randomUUID()),
+    id: String(source.id || createId()),
     name,
-    quantity: clampQuantity(item.quantity),
-    lowThreshold: clampQuantity(item.lowThreshold),
-    category: String(item.category || "").trim(),
-    updatedAt: String(item.updatedAt || new Date().toISOString()),
+    quantity: clampQuantity(source.quantity),
+    lowThreshold: hasExplicitThreshold
+      ? clampQuantity(source.lowThreshold)
+      : fallbackThreshold,
+    category: String(source.category || "").trim(),
+    updatedAt: String(source.updatedAt || new Date().toISOString()),
   };
 }
 
-export function loadItems() {
-  const raw = localStorage.getItem(STORAGE_KEY);
+function dedupeItemsById(items) {
+  const seen = new Set();
+  const deduped = [];
+
+  for (const item of items) {
+    if (seen.has(item.id)) {
+      continue;
+    }
+
+    seen.add(item.id);
+    deduped.push(item);
+  }
+
+  return deduped;
+}
+
+export function normalizeState(candidateState) {
+  if (!candidateState || typeof candidateState !== "object") {
+    return createDefaultState();
+  }
+
+  if (!Array.isArray(candidateState.items)) {
+    return createDefaultState();
+  }
+
+  const settings = normalizeSettings(candidateState.settings);
+  const items = dedupeItemsById(
+    candidateState.items
+      .map((item) => normalizeItem(item, settings))
+      .filter(Boolean)
+  );
+
+  return { items, settings };
+}
+
+function parseJson(raw) {
   if (!raw) {
-    return STARTER_ITEMS.map((item) => ({ ...item }));
+    return null;
   }
 
   try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return STARTER_ITEMS.map((item) => ({ ...item }));
-    }
-
-    const normalized = parsed.map(normalizeItem).filter(Boolean);
-    return normalized.length > 0
-      ? normalized
-      : STARTER_ITEMS.map((item) => ({ ...item }));
+    return JSON.parse(raw);
   } catch {
-    return STARTER_ITEMS.map((item) => ({ ...item }));
+    return null;
   }
 }
 
-export function saveItems(items) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+export function loadState(storage = globalThis.localStorage) {
+  if (!storage || typeof storage.getItem !== "function") {
+    return createDefaultState();
+  }
+
+  const current = parseJson(storage.getItem(STORAGE_KEY));
+  if (current === null) {
+    return createDefaultState();
+  }
+
+  return normalizeState(current);
+}
+
+export function saveState(state, storage = globalThis.localStorage) {
+  if (!storage || typeof storage.setItem !== "function") {
+    return;
+  }
+
+  const normalized = normalizeState(state);
+  const snapshot = {
+    items: normalized.items,
+    settings: normalized.settings,
+    updatedAt: new Date().toISOString(),
+  };
+
+  storage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
 }
 
 export function updateItemQuantity(items, itemId, nextQuantity) {
@@ -93,4 +196,68 @@ export function updateItemQuantity(items, itemId, nextQuantity) {
   return items.map((item) =>
     item.id === itemId ? { ...item, quantity, updatedAt: now } : item
   );
+}
+
+export function upsertItem(items, itemInput, settings = DEFAULT_SETTINGS) {
+  const source = itemInput && typeof itemInput === "object" ? itemInput : {};
+  const hasExplicitThreshold =
+    source.lowThreshold !== undefined &&
+    source.lowThreshold !== null &&
+    source.lowThreshold !== "";
+
+  const normalized = normalizeItem(
+    {
+      ...source,
+      lowThreshold: hasExplicitThreshold
+        ? source.lowThreshold
+        : settings.defaultLowThreshold,
+    },
+    settings
+  );
+
+  if (!normalized) {
+    return items;
+  }
+
+  const exists = items.some((item) => item.id === normalized.id);
+  if (!exists) {
+    return [...items, normalized];
+  }
+
+  return items.map((item) =>
+    item.id === normalized.id ? { ...item, ...normalized } : item
+  );
+}
+
+export function removeItem(items, itemId) {
+  return items.filter((item) => item.id !== itemId);
+}
+
+export function serializeState(state) {
+  const normalized = normalizeState(state);
+
+  return JSON.stringify(
+    {
+      items: normalized.items,
+      settings: normalized.settings,
+      exportedAt: new Date().toISOString(),
+    },
+    null,
+    2
+  );
+}
+
+export function deserializeState(rawText) {
+  let parsed = null;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch {
+    throw new Error("Backup file is not valid JSON.");
+  }
+
+  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.items)) {
+    throw new Error("Backup file must contain an items array.");
+  }
+
+  return normalizeState(parsed);
 }

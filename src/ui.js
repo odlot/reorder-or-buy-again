@@ -35,6 +35,9 @@ export function renderList(container, items) {
             <button class="step-button" type="button" data-action="step" data-step="1" aria-label="Increase ${safeName}">
               +
             </button>
+            <button class="remove-button" type="button" data-action="delete" aria-label="Remove ${safeName}">
+              Del
+            </button>
           </div>
         </li>
       `;

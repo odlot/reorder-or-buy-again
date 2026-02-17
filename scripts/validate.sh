@@ -15,4 +15,17 @@ for file in src/*.js; do
   node --check "$file"
 done
 
+for file in tests/*.test.js; do
+  if [[ ! -f "$file" ]]; then
+    echo "No tests found in tests/"
+    exit 1
+  fi
+
+  echo "Checking $file"
+  node --check "$file"
+done
+
+echo "Running tests"
+node --test tests/*.test.js
+
 echo "Validation passed."
