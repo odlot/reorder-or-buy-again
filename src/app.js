@@ -1,6 +1,5 @@
 import {
   isLowStock,
-  compareByUrgencyThenName,
   selectVisibleItems,
   clampQuantity,
 } from "./logic.js";
@@ -18,7 +17,6 @@ import {
   renderList,
   renderSummary,
   toggleEmptyState,
-  renderSettingsItemList,
 } from "./ui.js";
 
 const VIEWS = {
@@ -44,8 +42,6 @@ const navTabs = document.querySelectorAll(".nav-tab");
 const restockBadge = document.querySelector("#restock-badge");
 
 const defaultThresholdInput = document.querySelector("#default-threshold-input");
-const settingsItemList = document.querySelector("#settings-item-list");
-const settingsCount = document.querySelector("#settings-count");
 const settingsMessage = document.querySelector("#settings-message");
 const exportDataButton = document.querySelector("#export-data-button");
 const importDataInput = document.querySelector("#import-data-input");
@@ -85,10 +81,6 @@ function setQuickAddNotice(text, tone = "") {
 
 function renderSettingsPanel() {
   defaultThresholdInput.value = String(state.settings.defaultLowThreshold);
-
-  const sortedItems = [...state.items].sort(compareByUrgencyThenName);
-  renderSettingsItemList(settingsItemList, sortedItems);
-  settingsCount.textContent = `${state.items.length} total`;
 
   settingsMessage.textContent = state.settingsNotice.text;
   settingsMessage.classList.toggle(
@@ -239,58 +231,7 @@ function decodeItemId(rawId) {
   }
 }
 
-function editItem(itemId) {
-  const item = state.items.find((entry) => entry.id === itemId);
-  if (!item) {
-    return;
-  }
-
-  const nextNameRaw = window.prompt("Item name", item.name);
-  if (nextNameRaw === null) {
-    return;
-  }
-
-  const nextName = nextNameRaw.trim();
-  if (!nextName) {
-    setSettingsNotice("Item name cannot be empty.", "error");
-    render();
-    return;
-  }
-
-  const nextQuantity = window.prompt("Quantity", String(item.quantity));
-  if (nextQuantity === null) {
-    return;
-  }
-
-  const nextThreshold = window.prompt(
-    "Low-stock threshold",
-    String(item.lowThreshold)
-  );
-  if (nextThreshold === null) {
-    return;
-  }
-
-  const nextCategory = window.prompt("Category (optional)", item.category);
-  if (nextCategory === null) {
-    return;
-  }
-
-  state.items = upsertItem(
-    state.items,
-    {
-      id: item.id,
-      name: nextName,
-      quantity: nextQuantity,
-      lowThreshold: nextThreshold,
-      category: nextCategory,
-    },
-    state.settings
-  );
-  setSettingsNotice(`Updated ${nextName}.`, "success");
-  persistAndRender();
-}
-
-function deleteItemById(itemId, source = "settings") {
+function deleteItemById(itemId) {
   const item = state.items.find((entry) => entry.id === itemId);
   if (!item) {
     return;
@@ -302,15 +243,8 @@ function deleteItemById(itemId, source = "settings") {
   }
 
   state.items = removeItem(state.items, itemId);
-
-  if (source === "main") {
-    setQuickAddNotice(`Deleted ${item.name}.`, "success");
-    setSettingsNotice("", "");
-  } else {
-    setSettingsNotice(`Deleted ${item.name}.`, "success");
-    setQuickAddNotice("", "");
-  }
-
+  setQuickAddNotice(`Deleted ${item.name}.`, "success");
+  setSettingsNotice("", "");
   persistAndRender();
 }
 
@@ -389,32 +323,6 @@ quickAddForm.addEventListener("submit", (event) => {
   addItemFromQuickForm();
 });
 
-settingsItemList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-action]");
-  if (!button) {
-    return;
-  }
-
-  const row = button.closest("[data-item-id]");
-  if (!row) {
-    return;
-  }
-
-  const itemId = decodeItemId(row.dataset.itemId);
-  if (!itemId) {
-    return;
-  }
-
-  if (button.dataset.action === "edit-item") {
-    editItem(itemId);
-    return;
-  }
-
-  if (button.dataset.action === "delete-item") {
-    deleteItemById(itemId, "settings");
-  }
-});
-
 exportDataButton.addEventListener("click", () => {
   exportBackup();
 });
@@ -485,7 +393,7 @@ itemList.addEventListener("click", (event) => {
   }
 
   if (action === "delete") {
-    deleteItemById(itemId, "main");
+    deleteItemById(itemId);
   }
 });
 

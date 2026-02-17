@@ -109,8 +109,7 @@ body {
 .step-button:focus-visible,
 .remove-button:focus-visible,
 .settings-view input:focus-visible,
-.action-button:focus-visible,
-.settings-item-button:focus-visible {
+.action-button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -255,71 +254,6 @@ body {
 .settings-group {
   display: grid;
   gap: 0.6rem;
-}
-
-.settings-header-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.6rem;
-}
-
-.settings-meta {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.settings-item-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.5rem;
-  max-height: min(38vh, 22rem);
-  overflow: auto;
-}
-
-.settings-item {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.6rem;
-  align-items: center;
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  background: #fff;
-  padding: 0.55rem;
-}
-
-.settings-item-name {
-  margin: 0;
-  font-size: 0.93rem;
-}
-
-.settings-item-info {
-  margin: 0.25rem 0 0;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-.settings-item-actions {
-  display: inline-flex;
-  gap: 0.4rem;
-}
-
-.settings-item-button {
-  min-height: 2.25rem;
-  border: 1px solid var(--line);
-  border-radius: 0.65rem;
-  background: #fff;
-  color: var(--text);
-  padding: 0 0.55rem;
-  font-size: 0.84rem;
-  cursor: pointer;
-}
-
-.settings-item-button[data-action="delete-item"] {
-  color: var(--danger);
 }
 
 .settings-actions {

@@ -47,7 +47,7 @@ Milestones A, B, and C are implemented:
 - Remove items directly from main list (with confirmation)
 - Bottom navigation (`All`, `Restock`, `Settings`) with low-stock badge
 - Dedicated Restock view (low-stock items only)
-- Settings: default threshold, edit/delete items, reset local data
+- Settings: default threshold, backup import/export, reset local data
 - Import/export JSON backups
 - Local persistence via `localStorage` with schema migration support
 - Unit/persistence tests via Node test runner

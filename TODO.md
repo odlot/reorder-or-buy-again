@@ -47,7 +47,7 @@
 ### 6. Settings (Minimal)
 
 - [x] Manage low-stock threshold defaults.
-- [x] Add item creation/edit/delete flow.
+- [x] Add item creation/edit/delete flow in primary inventory view.
 - [x] Add reset/clear local data action with confirmation.
 
 ### 7. Persistence + Reliability
