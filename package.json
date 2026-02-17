@@ -1,0 +1,12 @@
+{
+  "name": "reorder-or-buy-again",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate": "./scripts/validate.sh",
+    "test:e2e": "./scripts/test-e2e.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.1"
+  }
+}

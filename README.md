@@ -26,6 +26,14 @@ This runs:
 - JavaScript syntax checks for `src/*.js` and `tests/*.test.js`
 - Node test suite via `node --test`
 
+Run end-to-end tests locally:
+
+```bash
+npm install
+npx playwright install chromium
+./scripts/test-e2e.sh
+```
+
 ## Git Hooks
 
 Enable repo-managed hooks once per clone:
@@ -51,3 +59,4 @@ Milestones A, B, and C are implemented:
 - Import/export JSON backups
 - Local persistence via `localStorage`
 - Unit/persistence tests via Node test runner
+- Mobile-focused Playwright e2e coverage for core inventory flows

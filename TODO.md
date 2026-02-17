@@ -59,13 +59,13 @@
 ### 8. UX Quality (Mobile-First)
 
 - [x] Ensure touch targets are comfortable (>= 44px height).
-- [ ] Keep key actions visible without scrolling where possible.
+- [x] Keep key actions visible without scrolling where possible.
 - [x] Add simple visual cues for low stock (color + icon/text).
 
 ### 9. Testing
 
 - [x] Unit tests for low-stock calculation and sorting.
-- [x] UI tests for quick increment/decrement interactions.
+- [x] Playwright e2e tests for add/edit/delete/restock interactions.
 - [x] Test multi-view behavior and persisted state.
 
 ## Suggested Implementation Order
