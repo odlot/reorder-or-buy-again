@@ -9,31 +9,10 @@ function escapeHtml(text) {
     .replaceAll("'", "&#039;");
 }
 
-function formatUnit(quantity, unit) {
-  if (!unit) {
-    return "units";
-  }
-
-  if (quantity === 1) {
-    if (unit.endsWith("s")) {
-      return unit.slice(0, -1);
-    }
-
-    return unit;
-  }
-
-  if (!unit.endsWith("s")) {
-    return `${unit}s`;
-  }
-
-  return unit;
-}
-
 export function renderList(container, items) {
   const markup = items
     .map((item) => {
       const low = isLowStock(item);
-      const unitLabel = formatUnit(item.quantity, item.unit);
       const safeName = escapeHtml(item.name);
       const safeItemId = encodeURIComponent(item.id);
 
@@ -51,7 +30,7 @@ export function renderList(container, items) {
               -
             </button>
             <button class="qty-button" type="button" data-action="edit" aria-label="Set quantity for ${safeName}">
-              ${item.quantity} ${unitLabel}
+              ${item.quantity}
             </button>
             <button class="step-button" type="button" data-action="step" data-step="1" aria-label="Increase ${safeName}">
               +

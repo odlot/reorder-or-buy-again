@@ -16,7 +16,7 @@
 
 ### 1. Inventory Data Model (Foundation)
 
-- [x] Define item shape: `id`, `name`, `quantity`, `unit`, `lowThreshold`, `category` (optional), `updatedAt`.
+- [x] Define item shape: `id`, `name`, `quantity`, `lowThreshold`, `category` (optional), `updatedAt`.
 - [x] Seed starter household items (dish soap, toothpaste, etc.).
 - [x] Add validation rules (no negative quantity, required name).
 
