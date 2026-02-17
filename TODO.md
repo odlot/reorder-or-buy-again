@@ -37,6 +37,7 @@
 - [x] Mark item as low when `quantity <= lowThreshold`.
 - [x] Create dedicated "Restock" view with only low items.
 - [x] Show low-stock count badge in navigation.
+- [x] Add one-tap restock actions (single item + bulk restock shown).
 
 ### 5. Multi-View Navigation
 
