@@ -35,6 +35,20 @@ npx playwright install chromium
 ./scripts/test-e2e.sh
 ```
 
+Run the full CI validation flow locally (validate + e2e):
+
+```bash
+npm run ci:local
+```
+
+Notes:
+- This keeps `validate` and `e2e` as separate scripts and executes them sequentially.
+- For Linux dependency parity with CI, run:
+
+```bash
+CI_LOCAL_WITH_DEPS=1 npm run ci:local
+```
+
 ## Deployment (GitHub Pages)
 
 The app is deployed as a static site from the `main` branch via GitHub Actions.
