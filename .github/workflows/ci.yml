@@ -50,6 +50,17 @@ jobs:
       - name: Run e2e script
         run: ./scripts/test-e2e.sh
 
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-artifacts
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 7
+
   deploy-pages:
     name: Deploy GitHub Pages
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
