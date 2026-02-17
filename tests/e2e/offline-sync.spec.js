@@ -71,10 +71,27 @@ test("offline file sync pulls newer snapshot from linked file", async ({ page })
 
   await page.getByRole("button", { name: "Settings" }).click();
   await page.click("#link-sync-button");
+  await expect(page.locator("#sync-status-chip")).toHaveText("Synced");
 
   await page.evaluate(() => {
-    const saved = JSON.parse(localStorage.getItem("reorder-or-buy-again.state"));
-    saved.items.push({
+    const payload = window.__syncMock.text
+      ? JSON.parse(window.__syncMock.text)
+      : null;
+    const baseState =
+      payload && payload.state && Array.isArray(payload.state.items)
+        ? payload.state
+        : {
+            items: [],
+            settings: { defaultLowThreshold: 1 },
+            updatedAt: new Date().toISOString(),
+          };
+
+    const nextState = {
+      ...baseState,
+      items: [...baseState.items],
+    };
+
+    nextState.items.push({
       id: "remote-only-item",
       name: "Remote Only Item",
       quantity: 4,
@@ -82,13 +99,13 @@ test("offline file sync pulls newer snapshot from linked file", async ({ page })
       category: "Sync",
       updatedAt: "2099-01-01T00:00:00.000Z",
     });
-    saved.updatedAt = "2099-01-01T00:00:00.000Z";
+    nextState.updatedAt = "2099-01-01T00:00:00.000Z";
 
     window.__syncMock.text = JSON.stringify({
       schemaVersion: 1,
       strategy: "last-write-wins-full",
-      updatedAt: saved.updatedAt,
-      state: saved,
+      updatedAt: nextState.updatedAt,
+      state: nextState,
     });
   });
 
