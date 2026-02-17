@@ -22,6 +22,10 @@ Run the same validation locally that CI runs:
 ./scripts/validate.sh
 ```
 
+This runs:
+- JavaScript syntax checks for `src/*.js` and `tests/*.test.js`
+- Node test suite via `node --test`
+
 ## Git Hooks
 
 Enable repo-managed hooks once per clone:
@@ -34,11 +38,14 @@ After setup, every `git commit` runs `./scripts/validate.sh` via pre-commit.
 
 ## Current status
 
-Milestone A and B are implemented:
+Milestones A, B, and C are implemented:
 
 - Foundation inventory model with starter household items
 - All-items view with search and urgency sorting
 - Fast quantity controls (`-`, `+`, tap quantity to set)
 - Bottom navigation (`All`, `Restock`, `Settings`) with low-stock badge
 - Dedicated Restock view (low-stock items only)
-- Local persistence via `localStorage`
+- Settings: default threshold, add/edit/delete items, reset local data
+- Import/export JSON backups
+- Local persistence via `localStorage` with schema migration support
+- Unit/persistence tests via Node test runner

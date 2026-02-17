@@ -1,17 +1,33 @@
 import {
-  compareByUrgencyThenName,
   isLowStock,
-  matchesSearch,
+  compareByUrgencyThenName,
+  selectVisibleItems,
   clampQuantity,
 } from "./logic.js";
-import { loadItems, saveItems, updateItemQuantity } from "./store.js";
-import { renderList, renderSummary, toggleEmptyState } from "./ui.js";
+import {
+  loadState,
+  saveState,
+  updateItemQuantity,
+  upsertItem,
+  removeItem,
+  createDefaultState,
+  serializeState,
+  deserializeState,
+} from "./store.js";
+import {
+  renderList,
+  renderSummary,
+  toggleEmptyState,
+  renderSettingsItemList,
+} from "./ui.js";
 
 const VIEWS = {
   ALL: "all",
   RESTOCK: "restock",
   SETTINGS: "settings",
 };
+
+const VALID_VIEWS = new Set(Object.values(VIEWS));
 
 const searchInput = document.querySelector("#search-input");
 const listToolbar = document.querySelector("#list-toolbar");
@@ -23,21 +39,81 @@ const emptyState = document.querySelector("#empty-state");
 const navTabs = document.querySelectorAll(".nav-tab");
 const restockBadge = document.querySelector("#restock-badge");
 
+const defaultThresholdInput = document.querySelector("#default-threshold-input");
+const addItemForm = document.querySelector("#add-item-form");
+const addItemNameInput = document.querySelector("#add-item-name");
+const addItemQuantityInput = document.querySelector("#add-item-quantity");
+const addItemThresholdInput = document.querySelector("#add-item-threshold");
+const addItemCategoryInput = document.querySelector("#add-item-category");
+const settingsItemList = document.querySelector("#settings-item-list");
+const settingsCount = document.querySelector("#settings-count");
+const settingsMessage = document.querySelector("#settings-message");
+const exportDataButton = document.querySelector("#export-data-button");
+const importDataInput = document.querySelector("#import-data-input");
+const resetDataButton = document.querySelector("#reset-data-button");
+
+const initialState = loadState();
 const state = {
-  items: loadItems(),
+  items: initialState.items,
+  settings: initialState.settings,
   query: "",
   activeView: VIEWS.ALL,
+  settingsNotice: {
+    text: "",
+    tone: "",
+  },
 };
 
 function getVisibleItems() {
-  const sourceItems =
+  return selectVisibleItems(
+    state.items,
+    state.query,
     state.activeView === VIEWS.RESTOCK
-      ? state.items.filter(isLowStock)
-      : state.items;
+  );
+}
 
-  return sourceItems
-    .filter((item) => matchesSearch(item, state.query))
-    .sort(compareByUrgencyThenName);
+function setSettingsNotice(text, tone = "") {
+  state.settingsNotice = { text, tone };
+}
+
+function renderSettingsPanel() {
+  defaultThresholdInput.value = String(state.settings.defaultLowThreshold);
+
+  const sortedItems = [...state.items].sort(compareByUrgencyThenName);
+  renderSettingsItemList(settingsItemList, sortedItems);
+  settingsCount.textContent = `${state.items.length} total`;
+
+  settingsMessage.textContent = state.settingsNotice.text;
+  settingsMessage.classList.toggle(
+    "is-error",
+    state.settingsNotice.tone === "error"
+  );
+  settingsMessage.classList.toggle(
+    "is-success",
+    state.settingsNotice.tone === "success"
+  );
+}
+
+function renderInventoryPanel(visibleItems, lowCount) {
+  renderList(itemList, visibleItems);
+
+  if (state.activeView === VIEWS.ALL) {
+    renderSummary(summaryLine, state.items.length, lowCount);
+  } else {
+    summaryLine.textContent = `${visibleItems.length} shown • ${lowCount} low stock total`;
+  }
+
+  if (visibleItems.length > 0) {
+    toggleEmptyState(emptyState, false);
+    return;
+  }
+
+  if (state.activeView === VIEWS.RESTOCK && !state.query.trim()) {
+    emptyState.textContent = "No low-stock items right now.";
+  } else {
+    emptyState.textContent = "No items match your search.";
+  }
+  toggleEmptyState(emptyState, true);
 }
 
 function render() {
@@ -63,32 +139,18 @@ function render() {
   restockBadge.classList.toggle("hidden", lowCount === 0);
 
   if (isSettings) {
+    renderSettingsPanel();
     return;
   }
 
-  renderList(itemList, visibleItems);
-
-  if (state.activeView === VIEWS.ALL) {
-    renderSummary(summaryLine, state.items.length, lowCount);
-  } else {
-    summaryLine.textContent = `${visibleItems.length} shown • ${lowCount} low stock total`;
-  }
-
-  if (visibleItems.length > 0) {
-    toggleEmptyState(emptyState, false);
-    return;
-  }
-
-  if (state.activeView === VIEWS.RESTOCK && !state.query.trim()) {
-    emptyState.textContent = "No low-stock items right now.";
-  } else {
-    emptyState.textContent = "No items match your search.";
-  }
-  toggleEmptyState(emptyState, true);
+  renderInventoryPanel(visibleItems, lowCount);
 }
 
 function persistAndRender() {
-  saveItems(state.items);
+  saveState({
+    items: state.items,
+    settings: state.settings,
+  });
   render();
 }
 
@@ -97,15 +159,232 @@ function setQuantity(itemId, nextQuantity) {
   persistAndRender();
 }
 
+function addItemFromForm() {
+  const name = addItemNameInput.value.trim();
+  if (!name) {
+    setSettingsNotice("Item name is required.", "error");
+    render();
+    return;
+  }
+
+  const nextItems = upsertItem(
+    state.items,
+    {
+      name,
+      quantity: addItemQuantityInput.value,
+      lowThreshold: addItemThresholdInput.value,
+      category: addItemCategoryInput.value,
+    },
+    state.settings
+  );
+
+  if (nextItems.length === state.items.length) {
+    setSettingsNotice("Could not add item. Check your input.", "error");
+    render();
+    return;
+  }
+
+  state.items = nextItems;
+  addItemForm.reset();
+  addItemQuantityInput.value = "0";
+  setSettingsNotice(`Added ${name}.`, "success");
+  persistAndRender();
+}
+
+function decodeItemId(rawId) {
+  try {
+    return decodeURIComponent(rawId || "");
+  } catch {
+    return "";
+  }
+}
+
+function editItem(itemId) {
+  const item = state.items.find((entry) => entry.id === itemId);
+  if (!item) {
+    return;
+  }
+
+  const nextNameRaw = window.prompt("Item name", item.name);
+  if (nextNameRaw === null) {
+    return;
+  }
+
+  const nextName = nextNameRaw.trim();
+  if (!nextName) {
+    setSettingsNotice("Item name cannot be empty.", "error");
+    render();
+    return;
+  }
+
+  const nextQuantity = window.prompt("Quantity", String(item.quantity));
+  if (nextQuantity === null) {
+    return;
+  }
+
+  const nextThreshold = window.prompt(
+    "Low-stock threshold",
+    String(item.lowThreshold)
+  );
+  if (nextThreshold === null) {
+    return;
+  }
+
+  const nextCategory = window.prompt("Category (optional)", item.category);
+  if (nextCategory === null) {
+    return;
+  }
+
+  state.items = upsertItem(
+    state.items,
+    {
+      id: item.id,
+      name: nextName,
+      quantity: nextQuantity,
+      lowThreshold: nextThreshold,
+      category: nextCategory,
+    },
+    state.settings
+  );
+  setSettingsNotice(`Updated ${nextName}.`, "success");
+  persistAndRender();
+}
+
+function deleteItemById(itemId) {
+  const item = state.items.find((entry) => entry.id === itemId);
+  if (!item) {
+    return;
+  }
+
+  const shouldDelete = window.confirm(`Delete "${item.name}"?`);
+  if (!shouldDelete) {
+    return;
+  }
+
+  state.items = removeItem(state.items, itemId);
+  setSettingsNotice(`Deleted ${item.name}.`, "success");
+  persistAndRender();
+}
+
+function exportBackup() {
+  const serialized = serializeState({
+    items: state.items,
+    settings: state.settings,
+  });
+
+  const fileName = `inventory-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  const blob = new Blob([serialized], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+
+  setSettingsNotice("Backup exported.", "success");
+  render();
+}
+
+async function importBackupFile(file) {
+  if (!file) {
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const imported = deserializeState(text);
+
+    state.items = imported.items;
+    state.settings = imported.settings;
+    setSettingsNotice("Backup imported successfully.", "success");
+    persistAndRender();
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to import backup.";
+    setSettingsNotice(message, "error");
+    render();
+  }
+}
+
+function resetLocalData() {
+  const shouldReset = window.confirm(
+    "Reset all local data and restore starter items?"
+  );
+  if (!shouldReset) {
+    return;
+  }
+
+  const defaults = createDefaultState();
+  state.items = defaults.items;
+  state.settings = defaults.settings;
+  state.query = "";
+  searchInput.value = "";
+  setSettingsNotice("Local data reset to starter defaults.", "success");
+  persistAndRender();
+}
+
 searchInput.addEventListener("input", (event) => {
   state.query = event.target.value;
   render();
 });
 
+defaultThresholdInput.addEventListener("change", (event) => {
+  state.settings.defaultLowThreshold = clampQuantity(event.target.value);
+  setSettingsNotice("Default threshold updated.", "success");
+  persistAndRender();
+});
+
+addItemForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  addItemFromForm();
+});
+
+settingsItemList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-action]");
+  if (!button) {
+    return;
+  }
+
+  const row = button.closest("[data-item-id]");
+  if (!row) {
+    return;
+  }
+
+  const itemId = decodeItemId(row.dataset.itemId);
+  if (!itemId) {
+    return;
+  }
+
+  if (button.dataset.action === "edit-item") {
+    editItem(itemId);
+    return;
+  }
+
+  if (button.dataset.action === "delete-item") {
+    deleteItemById(itemId);
+  }
+});
+
+exportDataButton.addEventListener("click", () => {
+  exportBackup();
+});
+
+importDataInput.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  await importBackupFile(file);
+  event.target.value = "";
+});
+
+resetDataButton.addEventListener("click", () => {
+  resetLocalData();
+});
+
 navTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     const { view } = tab.dataset;
-    if (!view || !Object.values(VIEWS).includes(view)) {
+    if (!view || !VALID_VIEWS.has(view)) {
       return;
     }
 
@@ -125,12 +404,11 @@ itemList.addEventListener("click", (event) => {
     return;
   }
 
-  let itemId = "";
-  try {
-    itemId = decodeURIComponent(row.dataset.itemId || "");
-  } catch {
+  const itemId = decodeItemId(row.dataset.itemId);
+  if (!itemId) {
     return;
   }
+
   const item = state.items.find((entry) => entry.id === itemId);
   if (!item) {
     return;

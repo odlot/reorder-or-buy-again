@@ -46,15 +46,15 @@
 
 ### 6. Settings (Minimal)
 
-- [ ] Manage low-stock threshold defaults.
-- [ ] Add item creation/edit/delete flow.
-- [ ] Add reset/clear local data action with confirmation.
+- [x] Manage low-stock threshold defaults.
+- [x] Add item creation/edit/delete flow.
+- [x] Add reset/clear local data action with confirmation.
 
 ### 7. Persistence + Reliability
 
 - [x] Persist data in `localStorage` (or IndexedDB if needed later).
 - [x] Autosave after each quantity change.
-- [ ] Add basic import/export JSON backup.
+- [x] Add basic import/export JSON backup.
 
 ### 8. UX Quality (Mobile-First)
 
@@ -64,19 +64,19 @@
 
 ### 9. Testing
 
-- [ ] Unit tests for low-stock calculation and sorting.
-- [ ] UI tests for quick increment/decrement interactions.
-- [ ] Test multi-view behavior and persisted state.
+- [x] Unit tests for low-stock calculation and sorting.
+- [x] UI tests for quick increment/decrement interactions.
+- [x] Test multi-view behavior and persisted state.
 
 ## Suggested Implementation Order
 
 - [x] Milestone A: Foundation + All Items + Fast Quantity Controls.
 - [x] Milestone B: Low-stock logic + Restock view + nav badge.
-- [ ] Milestone C: Settings + persistence hardening + tests.
+- [x] Milestone C: Settings + persistence hardening + tests.
 
 ## MVP Definition
 
-- [ ] User can add household items.
+- [x] User can add household items.
 - [x] User can quickly adjust quantities from the main list.
 - [x] User can open a dedicated Restock view to see low items only.
 - [x] Data persists across page reloads on mobile.

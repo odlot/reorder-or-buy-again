@@ -9,6 +9,15 @@ function escapeHtml(text) {
     .replaceAll("'", "&#039;");
 }
 
+function formatSettingsInfo(item) {
+  const parts = [`Qty ${item.quantity}`, `Low ${item.lowThreshold}`];
+  if (item.category) {
+    parts.push(item.category);
+  }
+
+  return parts.join(" • ");
+}
+
 export function renderList(container, items) {
   const markup = items
     .map((item) => {
@@ -50,4 +59,33 @@ export function renderSummary(target, totalItems, lowItems) {
 
 export function toggleEmptyState(node, isVisible) {
   node.classList.toggle("hidden", !isVisible);
+}
+
+export function renderSettingsItemList(container, items) {
+  const markup = items
+    .map((item) => {
+      const safeName = escapeHtml(item.name);
+      const safeInfo = escapeHtml(formatSettingsInfo(item));
+      const safeItemId = encodeURIComponent(item.id);
+
+      return `
+        <li class="settings-item" data-item-id="${safeItemId}">
+          <div>
+            <p class="settings-item-name">${safeName}</p>
+            <p class="settings-item-info">${safeInfo}</p>
+          </div>
+          <div class="settings-item-actions">
+            <button class="settings-item-button" type="button" data-action="edit-item">
+              Edit
+            </button>
+            <button class="settings-item-button" type="button" data-action="delete-item">
+              Delete
+            </button>
+          </div>
+        </li>
+      `;
+    })
+    .join("");
+
+  container.innerHTML = markup;
 }
