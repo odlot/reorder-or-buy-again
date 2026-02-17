@@ -49,6 +49,8 @@ Notes:
 CI_LOCAL_WITH_DEPS=1 npm run ci:local
 ```
 
+In GitHub Actions CI, Playwright debug artifacts (`playwright-report/`, `test-results/`) are uploaded automatically when e2e fails.
+
 ## Deployment (GitHub Pages)
 
 The app is deployed as a static site from the `main` branch via GitHub Actions.
