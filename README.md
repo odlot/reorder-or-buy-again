@@ -47,6 +47,20 @@ One-time setup in GitHub:
 
 After that, every push to `main` runs validation, e2e, and then deploys the static site automatically.
 
+## Persistence and Offline Sync
+
+- The app always persists immediately to browser `localStorage`.
+- `localStorage` is isolated per device/browser/profile, so desktop and mobile can diverge.
+- Optional offline file sync is available in `Settings`:
+  - `Link Sync File` selects a JSON file on disk.
+  - local changes auto-sync to that file (debounced).
+  - `Sync Now` forces sync and resolves full-snapshot conflicts.
+- Sync status chip meanings:
+  - `Synced`: local snapshot and linked file match.
+  - `Syncing`: file sync in progress.
+  - `Offline`: local-only mode (no file linked / unsupported browser).
+  - `Conflict`: same-timestamp mismatch detected; resolve via `Sync Now`.
+
 ## Git Hooks
 
 Enable repo-managed hooks once per clone:

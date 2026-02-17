@@ -54,6 +54,45 @@ body {
   font-size: 0.98rem;
 }
 
+.sync-chip {
+  margin: 0.6rem 0 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fbfcf9;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0 0.65rem;
+}
+
+.sync-chip.is-synced {
+  border-color: #c7dbc9;
+  background: #eff8ef;
+  color: #2f6c48;
+}
+
+.sync-chip.is-syncing {
+  border-color: #d7dccc;
+  background: #f7f9f2;
+  color: #5d6a5d;
+}
+
+.sync-chip.is-offline {
+  border-color: #d6d8dd;
+  background: #f7f7fa;
+  color: #676b76;
+}
+
+.sync-chip.is-conflict {
+  border-color: #e8cbc6;
+  background: #fff2ef;
+  color: var(--danger);
+}
+
 .toolbar {
   margin-top: 1rem;
 }
@@ -270,6 +309,10 @@ body {
   gap: 0.6rem;
 }
 
+.sync-actions {
+  grid-template-columns: 1fr 1fr;
+}
+
 .action-button {
   min-height: 2.7rem;
   border: 1px solid var(--line);
@@ -302,6 +345,12 @@ body {
 .settings-message {
   margin: 0;
   min-height: 1.1rem;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.sync-status-detail {
+  margin: 0;
   color: var(--muted);
   font-size: 0.84rem;
 }
@@ -436,6 +485,10 @@ body {
 
   .settings-actions {
     grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .sync-actions {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
