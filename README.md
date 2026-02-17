@@ -34,9 +34,11 @@ After setup, every `git commit` runs `./scripts/validate.sh` via pre-commit.
 
 ## Current status
 
-Milestone A is implemented:
+Milestone A and B are implemented:
 
 - Foundation inventory model with starter household items
 - All-items view with search and urgency sorting
 - Fast quantity controls (`-`, `+`, tap quantity to set)
+- Bottom navigation (`All`, `Restock`, `Settings`) with low-stock badge
+- Dedicated Restock view (low-stock items only)
 - Local persistence via `localStorage`

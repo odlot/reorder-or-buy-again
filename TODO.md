@@ -35,14 +35,14 @@
 ### 4. Low-Stock Logic + Restock View
 
 - [x] Mark item as low when `quantity <= lowThreshold`.
-- [ ] Create dedicated "Restock" view with only low items.
-- [ ] Show low-stock count badge in navigation.
+- [x] Create dedicated "Restock" view with only low items.
+- [x] Show low-stock count badge in navigation.
 
 ### 5. Multi-View Navigation
 
-- [ ] Add bottom nav tabs: `All`, `Restock`, `Settings`.
-- [ ] Preserve filters/state when switching tabs.
-- [ ] Ensure smooth switching with no full page reload.
+- [x] Add bottom nav tabs: `All`, `Restock`, `Settings`.
+- [x] Preserve filters/state when switching tabs.
+- [x] Ensure smooth switching with no full page reload.
 
 ### 6. Settings (Minimal)
 
@@ -71,12 +71,12 @@
 ## Suggested Implementation Order
 
 - [x] Milestone A: Foundation + All Items + Fast Quantity Controls.
-- [ ] Milestone B: Low-stock logic + Restock view + nav badge.
+- [x] Milestone B: Low-stock logic + Restock view + nav badge.
 - [ ] Milestone C: Settings + persistence hardening + tests.
 
 ## MVP Definition
 
 - [ ] User can add household items.
 - [x] User can quickly adjust quantities from the main list.
-- [ ] User can open a dedicated Restock view to see low items only.
+- [x] User can open a dedicated Restock view to see low items only.
 - [x] Data persists across page reloads on mobile.
