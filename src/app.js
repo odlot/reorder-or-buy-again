@@ -48,6 +48,10 @@ const VIEWS = {
   RESTOCK: "restock",
   SETTINGS: "settings",
 };
+const THEME_MODES = {
+  LIGHT: "light",
+  DARK: "dark",
+};
 const DELETE_UNDO_MS = 8000;
 const TOAST_AUTO_HIDE_MS = 2600;
 
@@ -71,6 +75,7 @@ const {
   undoMessage,
   undoButton,
   defaultThresholdInput,
+  themeModeInput,
   syncStatusDetail,
   syncLastSynced,
   linkSyncButton,
@@ -161,6 +166,15 @@ function snapshotFromState() {
     updatedAt: state.updatedAt || new Date().toISOString(),
     revision: state.revision,
   };
+}
+
+function normalizeThemeMode(themeMode) {
+  return themeMode === THEME_MODES.DARK ? THEME_MODES.DARK : THEME_MODES.LIGHT;
+}
+
+function applyThemeMode(themeMode) {
+  const normalizedTheme = normalizeThemeMode(themeMode);
+  document.documentElement.setAttribute("data-theme", normalizedTheme);
 }
 
 function setSyncStatus(status, detail = "") {
@@ -534,6 +548,9 @@ function scheduleUndo(item, index) {
 
 function renderSettingsPanel() {
   defaultThresholdInput.value = String(state.settings.defaultLowThreshold);
+  if (themeModeInput) {
+    themeModeInput.value = normalizeThemeMode(state.settings.themeMode);
+  }
 
   settingsMessage.textContent = state.settingsNotice.text;
   settingsMessage.classList.toggle(
@@ -575,6 +592,7 @@ function render() {
   const isSettings = state.activeView === VIEWS.SETTINGS;
   const visibleItems = getVisibleItems();
   const lowCount = state.items.filter(isLowStock).length;
+  applyThemeMode(state.settings.themeMode);
 
   listToolbar.classList.toggle("hidden", isSettings);
   inventoryView.classList.toggle("hidden", isSettings);

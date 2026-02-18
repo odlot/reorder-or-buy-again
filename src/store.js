@@ -3,6 +3,7 @@ import { clampQuantity } from "./logic.js";
 export const STORAGE_KEY = "reorder-or-buy-again.state";
 export const DEFAULT_SETTINGS = Object.freeze({
   defaultLowThreshold: 1,
+  themeMode: "light",
 });
 const DEFAULT_REVISION = 0;
 
@@ -67,6 +68,7 @@ function cloneStarterItems() {
 function createDefaultSettings() {
   return {
     defaultLowThreshold: DEFAULT_SETTINGS.defaultLowThreshold,
+    themeMode: DEFAULT_SETTINGS.themeMode,
   };
 }
 
@@ -91,11 +93,13 @@ function normalizeRevision(revision, fallback = DEFAULT_REVISION) {
 
 function normalizeSettings(settings) {
   const source = settings && typeof settings === "object" ? settings : {};
+  const themeMode = source.themeMode === "dark" ? "dark" : "light";
 
   return {
     defaultLowThreshold: clampQuantity(
       source.defaultLowThreshold ?? DEFAULT_SETTINGS.defaultLowThreshold
     ),
+    themeMode,
   };
 }
 

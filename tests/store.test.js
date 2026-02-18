@@ -35,6 +35,7 @@ test("createDefaultState returns starter items and default settings", () => {
   assert.equal(Array.isArray(state.items), true);
   assert.ok(state.items.length > 0);
   assert.equal(state.settings.defaultLowThreshold, 1);
+  assert.equal(state.settings.themeMode, "light");
   assert.equal(state.revision, 0);
 });
 
@@ -46,6 +47,7 @@ test("loadState falls back to defaults for invalid stored payloads", () => {
   const state = loadState(storage);
   assert.ok(state.items.length > 0);
   assert.equal(state.settings.defaultLowThreshold, 1);
+  assert.equal(state.settings.themeMode, "light");
   assert.equal(state.revision, 0);
 });
 
@@ -53,7 +55,7 @@ test("saveState writes current schema and round-trips through loadState", () => 
   const storage = createMemoryStorage();
   const state = {
     items: [{ id: "a", name: "Trash Bags", quantity: 4, lowThreshold: 2 }],
-    settings: { defaultLowThreshold: 3 },
+    settings: { defaultLowThreshold: 3, themeMode: "dark" },
   };
 
   saveState(state, storage);
@@ -62,6 +64,7 @@ test("saveState writes current schema and round-trips through loadState", () => 
   assert.equal(reloaded.items.length, 1);
   assert.equal(reloaded.items[0].name, "Trash Bags");
   assert.equal(reloaded.settings.defaultLowThreshold, 3);
+  assert.equal(reloaded.settings.themeMode, "dark");
   assert.equal(reloaded.revision, 1);
   assert.ok(storage.getItem(STORAGE_KEY));
 });
@@ -128,7 +131,7 @@ test("updateItemQuantity changes values and clamps at zero", () => {
 test("serializeState and deserializeState round-trip valid backups", () => {
   const state = normalizeState({
     items: [{ id: "x", name: "Toothpaste", quantity: 2, lowThreshold: 1 }],
-    settings: { defaultLowThreshold: 2 },
+    settings: { defaultLowThreshold: 2, themeMode: "dark" },
   });
 
   const text = serializeState(state);
@@ -137,6 +140,16 @@ test("serializeState and deserializeState round-trip valid backups", () => {
   assert.equal(parsed.items.length, 1);
   assert.equal(parsed.items[0].name, "Toothpaste");
   assert.equal(parsed.settings.defaultLowThreshold, 2);
+  assert.equal(parsed.settings.themeMode, "dark");
+});
+
+test("normalizeState falls back to light theme for invalid theme values", () => {
+  const state = normalizeState({
+    items: [],
+    settings: { defaultLowThreshold: 1, themeMode: "nope" },
+  });
+
+  assert.equal(state.settings.themeMode, "light");
 });
 
 test("deserializeState rejects malformed backup payloads", () => {
