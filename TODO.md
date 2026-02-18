@@ -50,6 +50,7 @@
 - [x] Manage low-stock threshold defaults.
 - [x] Add item creation/edit/delete flow in primary inventory view.
 - [x] Add reset/clear local data action with confirmation.
+- [ ] Allow customizing the `lowThreshold` for each item individually.
 
 ### 7. Persistence + Reliability
 

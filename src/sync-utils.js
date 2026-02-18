@@ -157,6 +157,7 @@ export function snapshotHash(snapshot) {
   return JSON.stringify({
     items: snapshot.items,
     settings: snapshot.settings,
+    shopping: snapshot.shopping,
   });
 }
 
@@ -169,6 +170,7 @@ export function buildSyncFilePayload(snapshot) {
       state: {
         items: snapshot.items,
         settings: snapshot.settings,
+        shopping: snapshot.shopping,
         updatedAt: snapshot.updatedAt,
       },
     },
@@ -237,10 +239,15 @@ export function mergeSnapshotsByUpdatedAt(localSnapshot, remoteSnapshot) {
     localSnapshotTime >= remoteSnapshotTime
       ? localSnapshot.settings
       : remoteSnapshot.settings;
+  const mergedShopping =
+    localSnapshotTime >= remoteSnapshotTime
+      ? localSnapshot.shopping
+      : remoteSnapshot.shopping;
 
   return normalizeState({
     items: mergedItems,
     settings: mergedSettings,
+    shopping: mergedShopping,
     updatedAt: new Date().toISOString(),
   });
 }
