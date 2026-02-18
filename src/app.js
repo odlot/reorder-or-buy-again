@@ -47,6 +47,7 @@ const VIEWS = {
   SETTINGS: "settings",
 };
 const DELETE_UNDO_MS = 8000;
+const TOAST_AUTO_HIDE_MS = 2600;
 
 const VALID_VIEWS = new Set(Object.values(VIEWS));
 
@@ -54,7 +55,6 @@ const {
   searchInput,
   quickAddForm,
   quickAddNameInput,
-  quickAddMessage,
   syncStatusChip,
   listToolbar,
   inventoryView,
@@ -67,6 +67,7 @@ const {
   restockBadge,
   undoToast,
   undoMessage,
+  undoButton,
   defaultThresholdInput,
   syncStatusDetail,
   syncLastSynced,
@@ -83,9 +84,10 @@ const state = {
   updatedAt: initialState.updatedAt || new Date().toISOString(),
   query: "",
   activeView: VIEWS.ALL,
-  quickAddNotice: {
+  toast: {
     text: "",
     tone: "",
+    timerId: null,
   },
   settingsNotice: {
     text: "",
@@ -118,8 +120,35 @@ function setSettingsNotice(text, tone = "") {
   state.settingsNotice = { text, tone };
 }
 
-function setQuickAddNotice(text, tone = "") {
-  state.quickAddNotice = { text, tone };
+function clearToastTimer() {
+  if (!state.toast.timerId) {
+    return;
+  }
+
+  clearTimeout(state.toast.timerId);
+  state.toast.timerId = null;
+}
+
+function clearToast() {
+  clearToastTimer();
+  state.toast.text = "";
+  state.toast.tone = "";
+}
+
+function showToast(text, tone = "success", { autoHideMs = TOAST_AUTO_HIDE_MS } = {}) {
+  clearToastTimer();
+  state.toast.text = text;
+  state.toast.tone = tone;
+
+  if (autoHideMs <= 0) {
+    return;
+  }
+
+  state.toast.timerId = setTimeout(() => {
+    state.toast.timerId = null;
+    clearToast();
+    render();
+  }, autoHideMs);
 }
 
 function snapshotFromState() {
@@ -477,6 +506,7 @@ function clearPendingDelete() {
 
 function scheduleUndo(item, index) {
   clearPendingDelete();
+  clearToast();
 
   const timerId = setTimeout(() => {
     state.pendingDelete = null;
@@ -550,22 +580,22 @@ function render() {
 
   restockBadge.textContent = lowCount > 99 ? "99+" : String(lowCount);
   restockBadge.classList.toggle("hidden", lowCount === 0);
-
-  quickAddMessage.textContent = state.quickAddNotice.text;
-  quickAddMessage.classList.toggle(
-    "is-error",
-    state.quickAddNotice.tone === "error"
-  );
-  quickAddMessage.classList.toggle(
-    "is-success",
-    state.quickAddNotice.tone === "success"
-  );
   renderSyncStatus();
 
-  if (state.pendingDelete) {
-    undoMessage.textContent = `"${state.pendingDelete.item.name}" removed.`;
+  const hasUndo = Boolean(state.pendingDelete);
+  const toastText = hasUndo
+    ? `"${state.pendingDelete.item.name}" removed.`
+    : state.toast.text;
+  const toastTone = hasUndo ? "success" : state.toast.tone;
+  if (toastText) {
+    undoMessage.textContent = toastText;
+    undoToast.classList.toggle("is-success", toastTone === "success");
+    undoToast.classList.toggle("is-error", toastTone === "error");
+    undoButton.classList.toggle("hidden", !hasUndo);
     undoToast.classList.remove("hidden");
   } else {
+    undoToast.classList.remove("is-success", "is-error");
+    undoButton.classList.add("hidden");
     undoToast.classList.add("hidden");
   }
 
@@ -615,7 +645,7 @@ function restockItemById(itemId) {
   }
 
   state.items = updateItemQuantity(state.items, itemId, targetQuantity);
-  setQuickAddNotice(`Restocked ${item.name}.`, "success");
+  showToast(`Restocked ${item.name}.`, "success");
   setSettingsNotice("", "");
   persistAndRender();
 }
@@ -653,7 +683,7 @@ function restockVisibleLowItems() {
   }
 
   const noun = restockedCount === 1 ? "item" : "items";
-  setQuickAddNotice(`Restocked ${restockedCount} ${noun}.`, "success");
+  showToast(`Restocked ${restockedCount} ${noun}.`, "success");
   setSettingsNotice("", "");
   persistAndRender({ touchUpdatedAt: true });
 }
@@ -701,13 +731,13 @@ function addItemFromQuickForm() {
   });
 
   if (!result.ok) {
-    setQuickAddNotice(result.error, "error");
+    showToast(result.error, "error");
     render();
     return;
   }
 
   quickAddForm.reset();
-  setQuickAddNotice(`Added ${result.name}.`, "success");
+  showToast(`Added ${result.name}.`, "success");
   setSettingsNotice("", "");
   persistAndRender();
 }
@@ -772,7 +802,6 @@ function deleteItemById(itemId) {
 
   scheduleUndo(snapshot, index);
   state.items = removeItem(state.items, itemId);
-  setQuickAddNotice(`Deleted ${itemName}.`, "success");
   setSettingsNotice("", "");
   persistAndRender();
 }
@@ -797,7 +826,7 @@ function undoDelete() {
     item,
     ...state.items.slice(targetIndex),
   ];
-  setQuickAddNotice(`Restored ${item.name}.`, "success");
+  showToast(`Restored ${item.name}.`, "success");
   persistAndRender();
 }
 
