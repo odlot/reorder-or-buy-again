@@ -35,6 +35,7 @@ test("createDefaultState returns starter items and default settings", () => {
   assert.equal(Array.isArray(state.items), true);
   assert.ok(state.items.length > 0);
   assert.equal(state.settings.defaultLowThreshold, 1);
+  assert.equal(state.revision, 0);
 });
 
 test("loadState falls back to defaults for invalid stored payloads", () => {
@@ -45,6 +46,7 @@ test("loadState falls back to defaults for invalid stored payloads", () => {
   const state = loadState(storage);
   assert.ok(state.items.length > 0);
   assert.equal(state.settings.defaultLowThreshold, 1);
+  assert.equal(state.revision, 0);
 });
 
 test("saveState writes current schema and round-trips through loadState", () => {
@@ -60,7 +62,31 @@ test("saveState writes current schema and round-trips through loadState", () => 
   assert.equal(reloaded.items.length, 1);
   assert.equal(reloaded.items[0].name, "Trash Bags");
   assert.equal(reloaded.settings.defaultLowThreshold, 3);
+  assert.equal(reloaded.revision, 1);
   assert.ok(storage.getItem(STORAGE_KEY));
+});
+
+test("saveState increments revision with storage snapshot guard", () => {
+  const storage = createMemoryStorage();
+  const first = saveState(
+    {
+      items: [{ id: "a", name: "Soap", quantity: 1, lowThreshold: 1 }],
+      settings: { defaultLowThreshold: 1 },
+      revision: 0,
+    },
+    storage
+  );
+  assert.equal(first.revision, 1);
+
+  const second = saveState(
+    {
+      items: [{ id: "a", name: "Soap", quantity: 2, lowThreshold: 1 }],
+      settings: { defaultLowThreshold: 1 },
+      revision: 0,
+    },
+    storage
+  );
+  assert.equal(second.revision, 2);
 });
 
 test("upsertItem uses default threshold when omitted", () => {

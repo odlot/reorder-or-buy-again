@@ -4,7 +4,9 @@ import {
   clampQuantity,
 } from "./logic.js";
 import {
+  STORAGE_KEY,
   loadState,
+  normalizeState,
   saveState,
   updateItemQuantity,
   upsertItem,
@@ -82,6 +84,7 @@ const state = {
   items: initialState.items,
   settings: initialState.settings,
   updatedAt: initialState.updatedAt || new Date().toISOString(),
+  revision: Number.isInteger(initialState.revision) ? initialState.revision : 0,
   query: "",
   activeView: VIEWS.ALL,
   toast: {
@@ -156,6 +159,7 @@ function snapshotFromState() {
     items: state.items,
     settings: state.settings,
     updatedAt: state.updatedAt || new Date().toISOString(),
+    revision: state.revision,
   };
 }
 
@@ -229,16 +233,24 @@ async function writeSnapshotToLinkedFile(snapshot) {
   state.sync.lastSyncedAt = snapshot.updatedAt;
 }
 
-function adoptSnapshot(snapshot) {
+function adoptSnapshot(snapshot, { persist = true } = {}) {
   clearPendingDelete();
+  clearToast();
   state.items = snapshot.items;
   state.settings = snapshot.settings;
   state.updatedAt = snapshot.updatedAt || new Date().toISOString();
-  saveState({
-    items: state.items,
-    settings: state.settings,
-    updatedAt: state.updatedAt,
-  });
+  state.revision = Number.isInteger(snapshot.revision)
+    ? snapshot.revision
+    : state.revision;
+
+  if (!persist) {
+    return;
+  }
+
+  const persistedSnapshot = saveState(snapshotFromState());
+  if (persistedSnapshot && Number.isInteger(persistedSnapshot.revision)) {
+    state.revision = persistedSnapshot.revision;
+  }
 }
 
 function clearAutoSyncTimer() {
@@ -612,11 +624,15 @@ function persistAndRender({ touchUpdatedAt = true, queueSync = true } = {}) {
     state.updatedAt = new Date().toISOString();
   }
 
-  saveState({
+  const persistedSnapshot = saveState({
     items: state.items,
     settings: state.settings,
     updatedAt: state.updatedAt,
+    revision: state.revision,
   });
+  if (persistedSnapshot && Number.isInteger(persistedSnapshot.revision)) {
+    state.revision = persistedSnapshot.revision;
+  }
 
   if (queueSync) {
     queueAutoSyncToFile();
@@ -893,6 +909,41 @@ function resetLocalData() {
   persistAndRender({ touchUpdatedAt: false });
 }
 
+function parseStorageSnapshot(rawValue) {
+  if (typeof rawValue !== "string") {
+    return null;
+  }
+
+  try {
+    return normalizeState(JSON.parse(rawValue));
+  } catch {
+    return null;
+  }
+}
+
+function handleStorageStateChange(event) {
+  if (!event || event.key !== STORAGE_KEY) {
+    return;
+  }
+
+  if (event.storageArea && event.storageArea !== window.localStorage) {
+    return;
+  }
+
+  const incomingSnapshot = parseStorageSnapshot(event.newValue);
+  if (!incomingSnapshot) {
+    return;
+  }
+
+  if (incomingSnapshot.revision <= state.revision) {
+    return;
+  }
+
+  adoptSnapshot(incomingSnapshot, { persist: false });
+  queueAutoSyncToFile();
+  render();
+}
+
 bindAppEvents({
   dom,
   state,
@@ -915,6 +966,7 @@ bindAppEvents({
   deleteItemById,
   commitQuantityFromInput,
   undoDelete,
+  onStorageStateChange: handleStorageStateChange,
   updateViewportOffsetBottom,
 });
 

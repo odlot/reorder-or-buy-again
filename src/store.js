@@ -4,6 +4,7 @@ export const STORAGE_KEY = "reorder-or-buy-again.state";
 export const DEFAULT_SETTINGS = Object.freeze({
   defaultLowThreshold: 1,
 });
+const DEFAULT_REVISION = 0;
 
 const STARTER_ITEMS = [
   {
@@ -75,7 +76,17 @@ export function createDefaultState() {
     items: cloneStarterItems(),
     settings: createDefaultSettings(),
     updatedAt: now,
+    revision: DEFAULT_REVISION,
   };
+}
+
+function normalizeRevision(revision, fallback = DEFAULT_REVISION) {
+  const parsed = Number.parseInt(revision, 10);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    return fallback;
+  }
+
+  return parsed;
 }
 
 function normalizeSettings(settings) {
@@ -148,8 +159,9 @@ export function normalizeState(candidateState) {
       .filter(Boolean)
   );
   const updatedAt = String(candidateState.updatedAt || new Date().toISOString());
+  const revision = normalizeRevision(candidateState.revision, DEFAULT_REVISION);
 
-  return { items, settings, updatedAt };
+  return { items, settings, updatedAt, revision };
 }
 
 function parseJson(raw) {
@@ -179,17 +191,28 @@ export function loadState(storage = globalThis.localStorage) {
 
 export function saveState(state, storage = globalThis.localStorage) {
   if (!storage || typeof storage.setItem !== "function") {
-    return;
+    return null;
   }
 
   const normalized = normalizeState(state);
+  const storedRaw = parseJson(storage.getItem(STORAGE_KEY));
+  const storedRevision =
+    storedRaw && typeof storedRaw === "object"
+      ? normalizeRevision(storedRaw.revision, DEFAULT_REVISION)
+      : DEFAULT_REVISION;
+  const baseRevision = Math.max(
+    normalizeRevision(normalized.revision, DEFAULT_REVISION),
+    storedRevision
+  );
   const snapshot = {
     items: normalized.items,
     settings: normalized.settings,
     updatedAt: String(normalized.updatedAt || new Date().toISOString()),
+    revision: baseRevision + 1,
   };
 
   storage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+  return snapshot;
 }
 
 export function updateItemQuantity(items, itemId, nextQuantity) {
@@ -244,6 +267,7 @@ export function serializeState(state) {
       items: normalized.items,
       settings: normalized.settings,
       updatedAt: normalized.updatedAt,
+      revision: normalized.revision,
       exportedAt: new Date().toISOString(),
     },
     null,
