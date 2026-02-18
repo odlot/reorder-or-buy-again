@@ -18,6 +18,8 @@ import {
   renderSummary,
   toggleEmptyState,
 } from "./ui.js";
+import { dom } from "./dom.js";
+import { updateViewportOffsetBottom } from "./viewport.js";
 import {
   AUTO_SYNC_DELAY_MS,
   SYNC_STATUS,
@@ -44,39 +46,39 @@ const VIEWS = {
   SETTINGS: "settings",
 };
 const DELETE_UNDO_MS = 8000;
-const VIEWPORT_OFFSET_VAR = "--viewport-offset-bottom";
 
 const VALID_VIEWS = new Set(Object.values(VIEWS));
 
-const searchInput = document.querySelector("#search-input");
-const quickAddForm = document.querySelector("#quick-add-form");
-const quickAddNameInput = document.querySelector("#quick-add-name");
-const quickAddMessage = document.querySelector("#quick-add-message");
-const syncStatusChip = document.querySelector("#sync-status-chip");
-const listToolbar = document.querySelector("#list-toolbar");
-const inventoryView = document.querySelector("#inventory-view");
-const settingsView = document.querySelector("#settings-view");
-const itemList = document.querySelector("#item-list");
-const summaryLine = document.querySelector("#summary-line");
-const restockAllButton = document.querySelector("#restock-all-button");
-const emptyState = document.querySelector("#empty-state");
-const navTabs = document.querySelectorAll(".nav-tab");
-const restockBadge = document.querySelector("#restock-badge");
-const undoToast = document.querySelector("#undo-toast");
-const undoMessage = document.querySelector("#undo-message");
-const undoButton = document.querySelector("#undo-button");
-
-const defaultThresholdInput = document.querySelector("#default-threshold-input");
-const syncStatusDetail = document.querySelector("#sync-status-detail");
-const syncLastSynced = document.querySelector("#sync-last-synced");
-const linkSyncButton = document.querySelector("#link-sync-button");
-const syncNowButton = document.querySelector("#sync-now-button");
-const clearSyncLinkButton = document.querySelector("#clear-sync-link-button");
-const settingsMessage = document.querySelector("#settings-message");
-const exportDataButton = document.querySelector("#export-data-button");
-const importDataButton = document.querySelector("#import-data-button");
-const importDataInput = document.querySelector("#import-data-input");
-const resetDataButton = document.querySelector("#reset-data-button");
+const {
+  searchInput,
+  quickAddForm,
+  quickAddNameInput,
+  quickAddMessage,
+  syncStatusChip,
+  listToolbar,
+  inventoryView,
+  settingsView,
+  itemList,
+  summaryLine,
+  restockAllButton,
+  emptyState,
+  navTabs,
+  restockBadge,
+  undoToast,
+  undoMessage,
+  undoButton,
+  defaultThresholdInput,
+  syncStatusDetail,
+  syncLastSynced,
+  linkSyncButton,
+  syncNowButton,
+  clearSyncLinkButton,
+  settingsMessage,
+  exportDataButton,
+  importDataButton,
+  importDataInput,
+  resetDataButton,
+} = dom;
 
 const initialState = loadState();
 const state = {
@@ -122,22 +124,6 @@ function setSettingsNotice(text, tone = "") {
 
 function setQuickAddNotice(text, tone = "") {
   state.quickAddNotice = { text, tone };
-}
-
-function updateViewportOffsetBottom() {
-  const root = document.documentElement;
-  const viewport = window.visualViewport;
-
-  if (!viewport) {
-    root.style.setProperty(VIEWPORT_OFFSET_VAR, "0px");
-    return;
-  }
-
-  const keyboardHeight = Math.max(
-    0,
-    window.innerHeight - (viewport.height + viewport.offsetTop)
-  );
-  root.style.setProperty(VIEWPORT_OFFSET_VAR, `${keyboardHeight}px`);
 }
 
 function snapshotFromState() {
