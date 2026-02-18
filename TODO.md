@@ -62,6 +62,7 @@
 - [x] Ensure touch targets are comfortable (>= 44px height).
 - [x] Keep key actions visible without scrolling where possible.
 - [x] Add simple visual cues for low stock (color + icon/text).
+- [ ] Add support for switching between light and dark mode.
 
 ### 9. Testing
 

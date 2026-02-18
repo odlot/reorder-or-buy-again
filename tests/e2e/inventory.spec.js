@@ -30,6 +30,9 @@ test("quick add creates an item with default quantity 1", async ({ page }) => {
   const row = itemRow(page, "Sponges");
   await expect(row).toHaveCount(1);
   await expect(row.locator(".qty-input")).toHaveValue("1");
+  await expect(page.locator("#undo-toast")).toBeVisible();
+  await expect(page.locator("#undo-message")).toContainText("Added Sponges");
+  await expect(page.locator("#undo-button")).toBeHidden();
 });
 
 test("action controls expose labels and finger-sized tap targets", async ({
@@ -119,9 +122,12 @@ test("delete removes an item and undo restores it", async ({ page }) => {
   await expect(itemRow(page, "Dish Scrubber")).toHaveCount(0);
   await expect(page.locator("#undo-toast")).toBeVisible();
   await expect(page.locator("#undo-message")).toContainText("Dish Scrubber");
+  await expect(page.locator("#undo-button")).toBeVisible();
 
   await page.click("#undo-button");
   await expect(itemRow(page, "Dish Scrubber")).toHaveCount(1);
+  await expect(page.locator("#undo-message")).toContainText("Restored Dish Scrubber");
+  await expect(page.locator("#undo-button")).toBeHidden();
 });
 
 test("restock view only shows low-stock items", async ({ page }) => {
@@ -143,7 +149,9 @@ test("restock quick action updates item and removes it from restock list", async
   await itemRow(page, "Dish Soap").locator('[data-action="restock"]').click();
 
   await expect(itemRow(page, "Dish Soap")).toHaveCount(0);
-  await expect(page.locator("#quick-add-message")).toContainText("Restocked Dish Soap");
+  await expect(page.locator("#undo-toast")).toBeVisible();
+  await expect(page.locator("#undo-message")).toContainText("Restocked Dish Soap");
+  await expect(page.locator("#undo-button")).toBeHidden();
 });
 
 test("restock shown bulk action clears current restock list", async ({ page }) => {
@@ -156,5 +164,7 @@ test("restock shown bulk action clears current restock list", async ({ page }) =
   await expect(page.locator("#empty-state")).toContainText(
     "No low-stock items right now."
   );
-  await expect(page.locator("#quick-add-message")).toContainText("Restocked");
+  await expect(page.locator("#undo-toast")).toBeVisible();
+  await expect(page.locator("#undo-message")).toContainText("Restocked");
+  await expect(page.locator("#undo-button")).toBeHidden();
 });

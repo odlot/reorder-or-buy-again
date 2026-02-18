@@ -131,21 +131,6 @@ body {
   min-height: var(--tap-target);
 }
 
-.quick-add-message {
-  margin: 0.4rem 0 0;
-  min-height: 1rem;
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.quick-add-message.is-error {
-  color: var(--danger);
-}
-
-.quick-add-message.is-success {
-  color: #2d6f47;
-}
-
 .search-wrap input:focus-visible,
 .quick-add-form input:focus-visible,
 .qty-input:focus-visible,
@@ -422,9 +407,27 @@ body {
   z-index: 40;
 }
 
+.undo-toast.is-success {
+  border-color: #c8d9c9;
+  background: #f4faf5;
+}
+
+.undo-toast.is-error {
+  border-color: #e8cbc6;
+  background: #fff2ef;
+}
+
 .undo-toast span {
   font-size: 0.88rem;
   color: var(--text);
+}
+
+.undo-toast.is-success span {
+  color: #2f6c48;
+}
+
+.undo-toast.is-error span {
+  color: var(--danger);
 }
 
 .undo-button {

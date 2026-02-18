@@ -2,7 +2,6 @@ export const dom = {
   searchInput: document.querySelector("#search-input"),
   quickAddForm: document.querySelector("#quick-add-form"),
   quickAddNameInput: document.querySelector("#quick-add-name"),
-  quickAddMessage: document.querySelector("#quick-add-message"),
   syncStatusChip: document.querySelector("#sync-status-chip"),
   listToolbar: document.querySelector("#list-toolbar"),
   inventoryView: document.querySelector("#inventory-view"),
