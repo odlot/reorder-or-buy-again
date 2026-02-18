@@ -18,6 +18,8 @@ export function bindAppEvents({
   setQuantity,
   restockItemById,
   deleteItemById,
+  togglePurchasedByItemId,
+  applyPurchasedItems,
   commitQuantityFromInput,
   undoDelete,
   onStorageStateChange,
@@ -38,6 +40,8 @@ export function bindAppEvents({
     clearSyncLinkButton,
     navTabs,
     itemList,
+    shoppingList,
+    applyPurchasedButton,
     undoButton,
   } = dom;
 
@@ -93,6 +97,10 @@ export function bindAppEvents({
 
   restockAllButton.addEventListener("click", () => {
     restockVisibleLowItems();
+  });
+
+  applyPurchasedButton.addEventListener("click", () => {
+    applyPurchasedItems();
   });
 
   clearSyncLinkButton.addEventListener("click", () => {
@@ -203,6 +211,25 @@ export function bindAppEvents({
     }
 
     input.dataset.previousValue = input.value;
+  });
+
+  shoppingList.addEventListener("change", (event) => {
+    const checkbox = event.target.closest('[data-action="toggle-purchased"]');
+    if (!checkbox) {
+      return;
+    }
+
+    const row = checkbox.closest("[data-item-id]");
+    if (!row) {
+      return;
+    }
+
+    const itemId = decodeItemId(row.dataset.itemId);
+    if (!itemId) {
+      return;
+    }
+
+    togglePurchasedByItemId(itemId, checkbox.checked);
   });
 
   undoButton.addEventListener("click", () => {

@@ -17,6 +17,7 @@ import {
 } from "./store.js";
 import {
   renderList,
+  renderShoppingList,
   renderSummary,
   toggleEmptyState,
 } from "./ui.js";
@@ -46,6 +47,7 @@ import {
 const VIEWS = {
   ALL: "all",
   RESTOCK: "restock",
+  SHOPPING: "shopping",
   SETTINGS: "settings",
 };
 const THEME_MODES = {
@@ -64,11 +66,16 @@ const {
   syncStatusChip,
   listToolbar,
   inventoryView,
+  shoppingView,
   settingsView,
   itemList,
+  shoppingList,
   summaryLine,
+  shoppingSummaryLine,
   restockAllButton,
+  applyPurchasedButton,
   emptyState,
+  shoppingEmptyState,
   navTabs,
   restockBadge,
   undoToast,
@@ -88,6 +95,7 @@ const initialState = loadState();
 const state = {
   items: initialState.items,
   settings: initialState.settings,
+  shopping: initialState.shopping,
   updatedAt: initialState.updatedAt || new Date().toISOString(),
   revision: Number.isInteger(initialState.revision) ? initialState.revision : 0,
   query: "",
@@ -122,6 +130,38 @@ function getVisibleItems() {
     state.query,
     state.activeView === VIEWS.RESTOCK
   );
+}
+
+function getShoppingItems() {
+  return selectVisibleItems(state.items, "", true);
+}
+
+function getPrunedPurchasedByItemId(items, purchasedByItemId) {
+  const lowStockIds = new Set(items.filter(isLowStock).map((item) => item.id));
+  const source =
+    purchasedByItemId && typeof purchasedByItemId === "object"
+      ? purchasedByItemId
+      : {};
+  const nextPurchasedByItemId = {};
+
+  for (const [itemId, purchased] of Object.entries(source)) {
+    if (!purchased || !lowStockIds.has(itemId)) {
+      continue;
+    }
+    nextPurchasedByItemId[itemId] = true;
+  }
+
+  return nextPurchasedByItemId;
+}
+
+function reconcileShoppingSelections() {
+  const purchasedByItemId =
+    state.shopping && typeof state.shopping === "object"
+      ? state.shopping.purchasedByItemId
+      : {};
+  state.shopping = {
+    purchasedByItemId: getPrunedPurchasedByItemId(state.items, purchasedByItemId),
+  };
 }
 
 function setSettingsNotice(text, tone = "") {
@@ -163,6 +203,7 @@ function snapshotFromState() {
   return {
     items: state.items,
     settings: state.settings,
+    shopping: state.shopping,
     updatedAt: state.updatedAt || new Date().toISOString(),
     revision: state.revision,
   };
@@ -252,6 +293,8 @@ function adoptSnapshot(snapshot, { persist = true } = {}) {
   clearToast();
   state.items = snapshot.items;
   state.settings = snapshot.settings;
+  state.shopping = snapshot.shopping;
+  reconcileShoppingSelections();
   state.updatedAt = snapshot.updatedAt || new Date().toISOString();
   state.revision = Number.isInteger(snapshot.revision)
     ? snapshot.revision
@@ -588,14 +631,40 @@ function renderInventoryPanel(visibleItems, lowCount) {
   toggleEmptyState(emptyState, true);
 }
 
+function renderShoppingPanel() {
+  const shoppingItems = getShoppingItems();
+  const purchasedByItemId = getPrunedPurchasedByItemId(
+    state.items,
+    state.shopping.purchasedByItemId
+  );
+  const purchasedCount = shoppingItems.filter(
+    (item) => purchasedByItemId[item.id]
+  ).length;
+
+  state.shopping = { purchasedByItemId };
+  renderShoppingList(shoppingList, shoppingItems, purchasedByItemId);
+  shoppingSummaryLine.textContent = `${shoppingItems.length} to buy • ${purchasedCount} purchased`;
+  applyPurchasedButton.disabled = purchasedCount === 0;
+
+  if (shoppingItems.length > 0) {
+    toggleEmptyState(shoppingEmptyState, false);
+    return;
+  }
+
+  shoppingEmptyState.textContent = "No low-stock items to shop for.";
+  toggleEmptyState(shoppingEmptyState, true);
+}
+
 function render() {
   const isSettings = state.activeView === VIEWS.SETTINGS;
+  const isShopping = state.activeView === VIEWS.SHOPPING;
   const visibleItems = getVisibleItems();
   const lowCount = state.items.filter(isLowStock).length;
   applyThemeMode(state.settings.themeMode);
 
-  listToolbar.classList.toggle("hidden", isSettings);
-  inventoryView.classList.toggle("hidden", isSettings);
+  listToolbar.classList.toggle("hidden", isSettings || isShopping);
+  inventoryView.classList.toggle("hidden", isSettings || isShopping);
+  shoppingView.classList.toggle("hidden", !isShopping);
   settingsView.classList.toggle("hidden", !isSettings);
 
   navTabs.forEach((tab) => {
@@ -634,10 +703,16 @@ function render() {
     return;
   }
 
+  if (isShopping) {
+    renderShoppingPanel();
+    return;
+  }
+
   renderInventoryPanel(visibleItems, lowCount);
 }
 
 function persistAndRender({ touchUpdatedAt = true, queueSync = true } = {}) {
+  reconcileShoppingSelections();
   if (touchUpdatedAt) {
     state.updatedAt = new Date().toISOString();
   }
@@ -645,6 +720,7 @@ function persistAndRender({ touchUpdatedAt = true, queueSync = true } = {}) {
   const persistedSnapshot = saveState({
     items: state.items,
     settings: state.settings,
+    shopping: state.shopping,
     updatedAt: state.updatedAt,
     revision: state.revision,
   });
@@ -718,6 +794,72 @@ function restockVisibleLowItems() {
 
   const noun = restockedCount === 1 ? "item" : "items";
   showToast(`Restocked ${restockedCount} ${noun}.`, "success");
+  setSettingsNotice("", "");
+  persistAndRender({ touchUpdatedAt: true });
+}
+
+function togglePurchasedByItemId(itemId, purchased) {
+  const item = state.items.find((entry) => entry.id === itemId);
+  if (!item || !isLowStock(item)) {
+    return;
+  }
+
+  const purchasedByItemId = {
+    ...state.shopping.purchasedByItemId,
+  };
+  if (purchased) {
+    purchasedByItemId[itemId] = true;
+  } else {
+    delete purchasedByItemId[itemId];
+  }
+
+  state.shopping = { purchasedByItemId };
+  persistAndRender();
+}
+
+function applyPurchasedItems() {
+  const purchasedByItemId = getPrunedPurchasedByItemId(
+    state.items,
+    state.shopping.purchasedByItemId
+  );
+  const purchasedIds = new Set(
+    Object.entries(purchasedByItemId)
+      .filter(([, purchased]) => purchased)
+      .map(([itemId]) => itemId)
+  );
+  if (purchasedIds.size === 0) {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  let appliedCount = 0;
+  state.items = state.items.map((item) => {
+    if (!purchasedIds.has(item.id)) {
+      return item;
+    }
+
+    const targetQuantity = getRestockTargetQuantity(item);
+    if (targetQuantity === item.quantity) {
+      return item;
+    }
+
+    appliedCount += 1;
+    return {
+      ...item,
+      quantity: targetQuantity,
+      updatedAt: now,
+    };
+  });
+
+  state.shopping = { purchasedByItemId: {} };
+
+  if (appliedCount === 0) {
+    persistAndRender();
+    return;
+  }
+
+  const noun = appliedCount === 1 ? "item" : "items";
+  showToast(`Applied purchases for ${appliedCount} ${noun}.`, "success");
   setSettingsNotice("", "");
   persistAndRender({ touchUpdatedAt: true });
 }
@@ -868,6 +1010,9 @@ function exportBackup() {
   const serialized = serializeState({
     items: state.items,
     settings: state.settings,
+    shopping: state.shopping,
+    updatedAt: state.updatedAt,
+    revision: state.revision,
   });
 
   const fileName = `inventory-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -897,7 +1042,9 @@ async function importBackupFile(file) {
     clearPendingDelete();
     state.items = imported.items;
     state.settings = imported.settings;
+    state.shopping = imported.shopping;
     state.updatedAt = imported.updatedAt || new Date().toISOString();
+    state.revision = Number.isInteger(imported.revision) ? imported.revision : 0;
     setSettingsNotice("Backup imported successfully.", "success");
     persistAndRender({ touchUpdatedAt: false });
   } catch (error) {
@@ -920,7 +1067,9 @@ function resetLocalData() {
   clearPendingDelete();
   state.items = defaults.items;
   state.settings = defaults.settings;
+  state.shopping = defaults.shopping;
   state.updatedAt = defaults.updatedAt || new Date().toISOString();
+  state.revision = defaults.revision;
   state.query = "";
   searchInput.value = "";
   setSettingsNotice("Local data reset to starter defaults.", "success");
@@ -982,6 +1131,8 @@ bindAppEvents({
   setQuantity,
   restockItemById,
   deleteItemById,
+  togglePurchasedByItemId,
+  applyPurchasedItems,
   commitQuantityFromInput,
   undoDelete,
   onStorageStateChange: handleStorageStateChange,

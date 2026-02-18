@@ -59,6 +59,36 @@ export function renderList(container, items) {
   container.innerHTML = markup;
 }
 
+export function renderShoppingList(container, items, purchasedByItemId = {}) {
+  const markup = items
+    .map((item) => {
+      const safeName = escapeHtml(item.name);
+      const safeItemId = encodeURIComponent(item.id);
+      const isPurchased = Boolean(purchasedByItemId[item.id]);
+
+      return `
+        <li class="shopping-row ${isPurchased ? "is-purchased" : ""}" data-item-id="${safeItemId}">
+          <label class="shopping-toggle">
+            <input
+              class="shopping-checkbox"
+              type="checkbox"
+              data-action="toggle-purchased"
+              ${isPurchased ? "checked" : ""}
+              aria-label="Mark ${safeName} as purchased"
+            />
+            <span class="shopping-name">${safeName}</span>
+          </label>
+          <p class="shopping-meta">
+            Qty: ${item.quantity} • Threshold: ${item.lowThreshold}
+          </p>
+        </li>
+      `;
+    })
+    .join("");
+
+  container.innerHTML = markup;
+}
+
 export function renderSummary(target, totalItems, lowItems) {
   target.textContent = `${totalItems} items • ${lowItems} low stock`;
 }

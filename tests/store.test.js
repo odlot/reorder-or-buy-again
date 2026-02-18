@@ -36,6 +36,7 @@ test("createDefaultState returns starter items and default settings", () => {
   assert.ok(state.items.length > 0);
   assert.equal(state.settings.defaultLowThreshold, 1);
   assert.equal(state.settings.themeMode, "light");
+  assert.deepEqual(state.shopping, { purchasedByItemId: {} });
   assert.equal(state.revision, 0);
 });
 
@@ -48,6 +49,7 @@ test("loadState falls back to defaults for invalid stored payloads", () => {
   assert.ok(state.items.length > 0);
   assert.equal(state.settings.defaultLowThreshold, 1);
   assert.equal(state.settings.themeMode, "light");
+  assert.deepEqual(state.shopping, { purchasedByItemId: {} });
   assert.equal(state.revision, 0);
 });
 
@@ -56,6 +58,7 @@ test("saveState writes current schema and round-trips through loadState", () => 
   const state = {
     items: [{ id: "a", name: "Trash Bags", quantity: 4, lowThreshold: 2 }],
     settings: { defaultLowThreshold: 3, themeMode: "dark" },
+    shopping: { purchasedByItemId: { a: true } },
   };
 
   saveState(state, storage);
@@ -65,6 +68,7 @@ test("saveState writes current schema and round-trips through loadState", () => 
   assert.equal(reloaded.items[0].name, "Trash Bags");
   assert.equal(reloaded.settings.defaultLowThreshold, 3);
   assert.equal(reloaded.settings.themeMode, "dark");
+  assert.deepEqual(reloaded.shopping, { purchasedByItemId: { a: true } });
   assert.equal(reloaded.revision, 1);
   assert.ok(storage.getItem(STORAGE_KEY));
 });
@@ -132,6 +136,7 @@ test("serializeState and deserializeState round-trip valid backups", () => {
   const state = normalizeState({
     items: [{ id: "x", name: "Toothpaste", quantity: 2, lowThreshold: 1 }],
     settings: { defaultLowThreshold: 2, themeMode: "dark" },
+    shopping: { purchasedByItemId: { x: true } },
   });
 
   const text = serializeState(state);
@@ -141,6 +146,7 @@ test("serializeState and deserializeState round-trip valid backups", () => {
   assert.equal(parsed.items[0].name, "Toothpaste");
   assert.equal(parsed.settings.defaultLowThreshold, 2);
   assert.equal(parsed.settings.themeMode, "dark");
+  assert.deepEqual(parsed.shopping, { purchasedByItemId: { x: true } });
 });
 
 test("normalizeState falls back to light theme for invalid theme values", () => {
@@ -150,6 +156,25 @@ test("normalizeState falls back to light theme for invalid theme values", () => 
   });
 
   assert.equal(state.settings.themeMode, "light");
+});
+
+test("normalizeState keeps purchased flags only for truthy values", () => {
+  const state = normalizeState({
+    items: [{ id: "soap", name: "Soap", quantity: 1, lowThreshold: 1 }],
+    shopping: {
+      purchasedByItemId: {
+        soap: true,
+        towels: false,
+        "": true,
+      },
+    },
+  });
+
+  assert.deepEqual(state.shopping, {
+    purchasedByItemId: {
+      soap: true,
+    },
+  });
 });
 
 test("deserializeState rejects malformed backup payloads", () => {

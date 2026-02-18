@@ -72,11 +72,18 @@ function createDefaultSettings() {
   };
 }
 
+function createDefaultShopping() {
+  return {
+    purchasedByItemId: {},
+  };
+}
+
 export function createDefaultState() {
   const now = new Date().toISOString();
   return {
     items: cloneStarterItems(),
     settings: createDefaultSettings(),
+    shopping: createDefaultShopping(),
     updatedAt: now,
     revision: DEFAULT_REVISION,
   };
@@ -101,6 +108,25 @@ function normalizeSettings(settings) {
     ),
     themeMode,
   };
+}
+
+function normalizeShopping(shopping) {
+  const source = shopping && typeof shopping === "object" ? shopping : {};
+  const purchasedSource =
+    source.purchasedByItemId && typeof source.purchasedByItemId === "object"
+      ? source.purchasedByItemId
+      : {};
+  const purchasedByItemId = {};
+
+  for (const [itemId, purchased] of Object.entries(purchasedSource)) {
+    const normalizedId = String(itemId || "").trim();
+    if (!normalizedId || !purchased) {
+      continue;
+    }
+    purchasedByItemId[normalizedId] = true;
+  }
+
+  return { purchasedByItemId };
 }
 
 export function normalizeItem(item, settings = DEFAULT_SETTINGS) {
@@ -157,6 +183,7 @@ export function normalizeState(candidateState) {
   }
 
   const settings = normalizeSettings(candidateState.settings);
+  const shopping = normalizeShopping(candidateState.shopping);
   const items = dedupeItemsById(
     candidateState.items
       .map((item) => normalizeItem(item, settings))
@@ -165,7 +192,7 @@ export function normalizeState(candidateState) {
   const updatedAt = String(candidateState.updatedAt || new Date().toISOString());
   const revision = normalizeRevision(candidateState.revision, DEFAULT_REVISION);
 
-  return { items, settings, updatedAt, revision };
+  return { items, settings, shopping, updatedAt, revision };
 }
 
 function parseJson(raw) {
@@ -211,6 +238,7 @@ export function saveState(state, storage = globalThis.localStorage) {
   const snapshot = {
     items: normalized.items,
     settings: normalized.settings,
+    shopping: normalized.shopping,
     updatedAt: String(normalized.updatedAt || new Date().toISOString()),
     revision: baseRevision + 1,
   };
@@ -270,6 +298,7 @@ export function serializeState(state) {
     {
       items: normalized.items,
       settings: normalized.settings,
+      shopping: normalized.shopping,
       updatedAt: normalized.updatedAt,
       revision: normalized.revision,
       exportedAt: new Date().toISOString(),

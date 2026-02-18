@@ -67,6 +67,28 @@
       </section>
 
       <section
+        id="shopping-view"
+        class="shopping-view hidden"
+        aria-label="Shopping list"
+      >
+        <div class="shopping-toolbar">
+          <p id="shopping-summary-line" class="summary-line" aria-live="polite"></p>
+          <button
+            id="apply-purchased-button"
+            class="action-button primary-button"
+            type="button"
+            aria-label="Apply purchased items to inventory"
+          >
+            Apply purchased
+          </button>
+        </div>
+        <ul id="shopping-list" class="shopping-list"></ul>
+        <p id="shopping-empty-state" class="empty-state hidden">
+          No low-stock items to shop for.
+        </p>
+      </section>
+
+      <section
         id="settings-view"
         class="settings-view hidden"
         aria-label="Settings"
@@ -182,6 +204,14 @@
         >
           Restock
           <span id="restock-badge" class="badge hidden" aria-live="polite">0</span>
+        </button>
+        <button
+          class="nav-tab"
+          type="button"
+          data-view="shopping"
+          aria-label="Open shopping view"
+        >
+          Shopping
         </button>
         <button
           class="nav-tab"

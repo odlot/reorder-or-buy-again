@@ -43,16 +43,19 @@ test("action controls expose labels and finger-sized tap targets", async ({
   });
   const allTab = page.getByRole("button", { name: "Open all items view" });
   const restockTab = page.getByRole("button", { name: "Open restock view" });
+  const shoppingTab = page.getByRole("button", { name: "Open shopping view" });
   const settingsTab = page.getByRole("button", { name: "Open settings view" });
 
   await expect(addItemButton).toBeVisible();
   await expect(allTab).toBeVisible();
   await expect(restockTab).toBeVisible();
+  await expect(shoppingTab).toBeVisible();
   await expect(settingsTab).toBeVisible();
 
   await expectTapTarget(addItemButton);
   await expectTapTarget(allTab);
   await expectTapTarget(restockTab);
+  await expectTapTarget(shoppingTab);
   await expectTapTarget(settingsTab);
 
   const decreaseDishSoap = page.getByRole("button", {
@@ -167,4 +170,32 @@ test("restock shown bulk action clears current restock list", async ({ page }) =
   await expect(page.locator("#undo-toast")).toBeVisible();
   await expect(page.locator("#undo-message")).toContainText("Restocked");
   await expect(page.locator("#undo-button")).toBeHidden();
+});
+
+test("shopping view can mark purchased items and apply them to inventory", async ({
+  page,
+}) => {
+  await page.locator('.nav-tab[data-view="shopping"]').click();
+
+  const dishSoapCheckbox = page.getByRole("checkbox", {
+    name: "Mark Dish Soap as purchased",
+  });
+  await expect(dishSoapCheckbox).toBeVisible();
+  await dishSoapCheckbox.check();
+
+  await expect(page.locator("#apply-purchased-button")).toBeEnabled();
+  await page.click("#apply-purchased-button");
+
+  await expect(page.locator("#undo-toast")).toBeVisible();
+  await expect(page.locator("#undo-message")).toContainText(
+    "Applied purchases for 1 item."
+  );
+
+  await page.locator('.nav-tab[data-view="all"]').click();
+  await expect(itemRow(page, "Dish Soap").locator(".qty-input")).toHaveValue("2");
+
+  await page.locator('.nav-tab[data-view="shopping"]').click();
+  await expect(
+    page.getByRole("checkbox", { name: "Mark Dish Soap as purchased" })
+  ).toHaveCount(0);
 });
