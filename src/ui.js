@@ -24,6 +24,13 @@ export function renderList(container, items) {
               Threshold: ${item.lowThreshold}
               ${low ? '<span class="low-label">Low</span>' : ""}
             </p>
+            ${
+              low
+                ? `<button class="restock-button" type="button" data-action="restock" aria-label="Restock ${safeName}">
+              Restock
+            </button>`
+                : ""
+            }
           </div>
           <div class="controls">
             <button class="step-button" type="button" data-action="step" data-step="-1" aria-label="Decrease ${safeName}">

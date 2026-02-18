@@ -62,6 +62,7 @@ const inventoryView = document.querySelector("#inventory-view");
 const settingsView = document.querySelector("#settings-view");
 const itemList = document.querySelector("#item-list");
 const summaryLine = document.querySelector("#summary-line");
+const restockAllButton = document.querySelector("#restock-all-button");
 const emptyState = document.querySelector("#empty-state");
 const navTabs = document.querySelectorAll(".nav-tab");
 const restockBadge = document.querySelector("#restock-badge");
@@ -742,6 +743,9 @@ function renderSettingsPanel() {
 
 function renderInventoryPanel(visibleItems, lowCount) {
   renderList(itemList, visibleItems);
+  const canBulkRestock =
+    state.activeView === VIEWS.RESTOCK && visibleItems.length > 0;
+  restockAllButton.classList.toggle("hidden", !canBulkRestock);
 
   if (state.activeView === VIEWS.ALL) {
     renderSummary(summaryLine, state.items.length, lowCount);
@@ -830,6 +834,65 @@ function persistAndRender({ touchUpdatedAt = true, queueSync = true } = {}) {
 function setQuantity(itemId, nextQuantity) {
   state.items = updateItemQuantity(state.items, itemId, nextQuantity);
   persistAndRender();
+}
+
+function getRestockTargetQuantity(item) {
+  return Math.max(item.quantity, item.lowThreshold + 1);
+}
+
+function restockItemById(itemId) {
+  const item = state.items.find((entry) => entry.id === itemId);
+  if (!item) {
+    return;
+  }
+
+  const targetQuantity = getRestockTargetQuantity(item);
+  if (targetQuantity === item.quantity) {
+    return;
+  }
+
+  state.items = updateItemQuantity(state.items, itemId, targetQuantity);
+  setQuickAddNotice(`Restocked ${item.name}.`, "success");
+  setSettingsNotice("", "");
+  persistAndRender();
+}
+
+function restockVisibleLowItems() {
+  const visibleLowIds = new Set(
+    getVisibleItems().filter(isLowStock).map((item) => item.id)
+  );
+  if (visibleLowIds.size === 0) {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  let restockedCount = 0;
+  state.items = state.items.map((item) => {
+    if (!visibleLowIds.has(item.id)) {
+      return item;
+    }
+
+    const targetQuantity = getRestockTargetQuantity(item);
+    if (targetQuantity === item.quantity) {
+      return item;
+    }
+
+    restockedCount += 1;
+    return {
+      ...item,
+      quantity: targetQuantity,
+      updatedAt: now,
+    };
+  });
+
+  if (restockedCount === 0) {
+    return;
+  }
+
+  const noun = restockedCount === 1 ? "item" : "items";
+  setQuickAddNotice(`Restocked ${restockedCount} ${noun}.`, "success");
+  setSettingsNotice("", "");
+  persistAndRender({ touchUpdatedAt: true });
 }
 
 function addItem(input) {
@@ -1076,6 +1139,10 @@ syncNowButton.addEventListener("click", () => {
   void syncWithLinkedFile();
 });
 
+restockAllButton.addEventListener("click", () => {
+  restockVisibleLowItems();
+});
+
 clearSyncLinkButton.addEventListener("click", () => {
   void clearSyncLink();
 });
@@ -1122,6 +1189,11 @@ itemList.addEventListener("click", (event) => {
     }
 
     setQuantity(itemId, item.quantity + step);
+    return;
+  }
+
+  if (action === "restock") {
+    restockItemById(itemId);
     return;
   }
 

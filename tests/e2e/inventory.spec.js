@@ -70,11 +70,36 @@ test("delete removes an item and undo restores it", async ({ page }) => {
 });
 
 test("restock view only shows low-stock items", async ({ page }) => {
-  await page.getByRole("button", { name: /Restock/ }).click();
+  await page.locator('.nav-tab[data-view="restock"]').click();
 
   await expect(itemRow(page, "Dish Soap")).toHaveCount(1);
   await expect(itemRow(page, "Laundry Detergent")).toHaveCount(1);
   await expect(itemRow(page, "Paper Towels")).toHaveCount(1);
   await expect(itemRow(page, "Toothpaste")).toHaveCount(0);
   await expect(itemRow(page, "Trash Bags")).toHaveCount(0);
+});
+
+test("restock quick action updates item and removes it from restock list", async ({
+  page,
+}) => {
+  await page.locator('.nav-tab[data-view="restock"]').click();
+  await expect(itemRow(page, "Dish Soap")).toHaveCount(1);
+
+  await itemRow(page, "Dish Soap").locator('[data-action="restock"]').click();
+
+  await expect(itemRow(page, "Dish Soap")).toHaveCount(0);
+  await expect(page.locator("#quick-add-message")).toContainText("Restocked Dish Soap");
+});
+
+test("restock shown bulk action clears current restock list", async ({ page }) => {
+  await page.locator('.nav-tab[data-view="restock"]').click();
+  await expect(page.locator("#restock-all-button")).toBeVisible();
+
+  await page.click("#restock-all-button");
+
+  await expect(page.locator("#summary-line")).toContainText("0 shown");
+  await expect(page.locator("#empty-state")).toContainText(
+    "No low-stock items right now."
+  );
+  await expect(page.locator("#quick-add-message")).toContainText("Restocked");
 });

@@ -146,6 +146,7 @@ body {
 .search-wrap input:focus-visible,
 .quick-add-form input:focus-visible,
 .qty-input:focus-visible,
+.restock-button:focus-visible,
 .step-button:focus-visible,
 .remove-button:focus-visible,
 .settings-view input:focus-visible,
@@ -158,6 +159,15 @@ body {
   margin: 0.65rem 0 0;
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.restock-all-button {
+  margin-top: 0.45rem;
+  width: 100%;
+  min-height: 2.55rem;
+  border-color: #c5d7c7;
+  background: #eff8ef;
+  color: #2f6c48;
 }
 
 .item-list {
@@ -205,6 +215,19 @@ body {
   margin-left: 0.35rem;
   color: var(--low-text);
   font-weight: 600;
+}
+
+.restock-button {
+  margin-top: 0.42rem;
+  min-height: 2.25rem;
+  border: 1px solid #c5d7c7;
+  border-radius: 0.7rem;
+  background: #eff8ef;
+  color: #2f6c48;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0 0.65rem;
+  cursor: pointer;
 }
 
 .controls {

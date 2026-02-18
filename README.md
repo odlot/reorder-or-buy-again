@@ -156,6 +156,7 @@ Milestones A, B, and C are implemented:
 - Remove items directly from main list (with undo)
 - Bottom navigation (`All`, `Restock`, `Settings`) with low-stock badge
 - Dedicated Restock view (low-stock items only)
+- Restock quick actions (single-item and bulk `Restock shown`)
 - Settings: default threshold, backup import/export, reset local data
 - Import/export JSON backups
 - Local persistence via `localStorage`
