@@ -50,17 +50,30 @@ CI_LOCAL_WITH_DEPS=1 npm run ci:local
 ## Release Steps
 
 1. Pick next version number following SemVer.
-2. Update `README.md`:
-   - move `Unreleased` items under the new version heading with date,
-   - start a fresh `Unreleased` section.
-3. Create and push tag:
+2. Run automated release preparation from `main`:
 
 ```bash
 git checkout main
-git pull
-git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git pull --ff-only origin main
+./scripts/release.sh X.Y.Z
+```
+
+This script:
+- runs local CI (`npm run ci:local`) unless `--skip-ci` is used,
+- verifies changelog/release metadata in `README.md`,
+- rolls `Unreleased` entries into `vX.Y.Z - YYYY-MM-DD`,
+- creates a fresh `Unreleased` placeholder,
+- updates `Current release channel`,
+- creates a release commit and annotated tag.
+
+3. Push commit and tag:
+
+```bash
+git push origin main
 git push origin vX.Y.Z
 ```
+
+You can also use `./scripts/release.sh X.Y.Z --push` to push both automatically.
 
 4. Publish GitHub Release notes from tag `vX.Y.Z`.
 
