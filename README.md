@@ -60,12 +60,16 @@ In GitHub Actions CI, Playwright debug artifacts (`playwright-report/`, `test-re
 ## Versioning and Changelog
 
 - Versioning model: SemVer (`MAJOR.MINOR.PATCH`).
-- Current release channel: `Unreleased` (no stable tag published yet).
+- Current release channel: v0.1.0.
 - Release process and checklist: see `RELEASE.md`.
 
 ### Changelog
 
 #### Unreleased
+
+- _No changes yet._
+
+#### v0.1.0 - 2026-02-18
 
 - Mobile-first inventory management with fast quantity controls.
 - Restock-focused view and low-stock indicators.
