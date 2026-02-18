@@ -43,6 +43,20 @@ for file in scripts/*.sh; do
   bash -n "$file"
 done
 
+if command -v shellcheck >/dev/null 2>&1; then
+  echo "Running shellcheck"
+  shellcheck scripts/*.sh .githooks/pre-commit
+else
+  echo "shellcheck not found; skipping shell lint."
+fi
+
+if command -v actionlint >/dev/null 2>&1; then
+  echo "Running actionlint"
+  actionlint
+else
+  echo "actionlint not found; skipping workflow lint."
+fi
+
 echo "Running tests"
 node --test tests/*.test.js
 
