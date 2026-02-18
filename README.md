@@ -51,6 +51,22 @@ CI_LOCAL_WITH_DEPS=1 npm run ci:local
 
 In GitHub Actions CI, Playwright debug artifacts (`playwright-report/`, `test-results/`) are uploaded automatically when e2e fails.
 
+## Versioning and Changelog
+
+- Versioning model: SemVer (`MAJOR.MINOR.PATCH`).
+- Current release channel: `Unreleased` (no stable tag published yet).
+- Release process and checklist: see `RELEASE.md`.
+
+### Changelog
+
+#### Unreleased
+
+- Mobile-first inventory management with fast quantity controls.
+- Restock-focused view and low-stock indicators.
+- Local persistence via `localStorage`.
+- Offline file sync mode with status chip, conflict handling, and clear link action.
+- CI pipeline with validate + Playwright e2e + GitHub Pages deployment.
+
 ## Deployment (GitHub Pages)
 
 The app is deployed as a static site from the `main` branch via GitHub Actions.
@@ -102,6 +118,22 @@ After that, every push to `main` runs validation, e2e, and then deploys the stat
 - Sources:
   - MDN: https://developer.mozilla.org/en-US/docs/Web/API/Window/showSaveFilePicker
   - Can I Use: https://caniuse.com/native-filesystem-api
+
+## Mobile Smoke Checklist
+
+Run this before each release on real devices:
+
+- iOS Safari:
+  - Open app and confirm existing local state loads.
+  - Quick-add item defaults to quantity `1`.
+  - `+`, `-`, inline quantity edit, and delete + undo all work.
+  - Restock tab shows only low-stock items.
+  - Settings sync status chip updates and `Sync Now`/`Clear Sync Link` behave correctly.
+- Android Chrome:
+  - Repeat all checks above.
+  - Verify offline sync link/restore and conflict resolution flow.
+
+Detailed release checklist lives in `RELEASE.md`.
 
 ## Git Hooks
 
