@@ -12,6 +12,13 @@ function itemRow(page, name) {
   });
 }
 
+async function expectTapTarget(locator, minSize = 44) {
+  const box = await locator.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box.width).toBeGreaterThanOrEqual(minSize);
+  expect(box.height).toBeGreaterThanOrEqual(minSize);
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
@@ -23,6 +30,54 @@ test("quick add creates an item with default quantity 1", async ({ page }) => {
   const row = itemRow(page, "Sponges");
   await expect(row).toHaveCount(1);
   await expect(row.locator(".qty-input")).toHaveValue("1");
+});
+
+test("action controls expose labels and finger-sized tap targets", async ({
+  page,
+}) => {
+  const addItemButton = page.getByRole("button", {
+    name: "Add item to inventory",
+  });
+  const allTab = page.getByRole("button", { name: "Open all items view" });
+  const restockTab = page.getByRole("button", { name: "Open restock view" });
+  const settingsTab = page.getByRole("button", { name: "Open settings view" });
+
+  await expect(addItemButton).toBeVisible();
+  await expect(allTab).toBeVisible();
+  await expect(restockTab).toBeVisible();
+  await expect(settingsTab).toBeVisible();
+
+  await expectTapTarget(addItemButton);
+  await expectTapTarget(allTab);
+  await expectTapTarget(restockTab);
+  await expectTapTarget(settingsTab);
+
+  const decreaseDishSoap = page.getByRole("button", {
+    name: "Decrease Dish Soap",
+  });
+  const increaseDishSoap = page.getByRole("button", {
+    name: "Increase Dish Soap",
+  });
+  const removeDishSoap = page.getByRole("button", { name: "Remove Dish Soap" });
+
+  await expect(decreaseDishSoap).toBeVisible();
+  await expect(increaseDishSoap).toBeVisible();
+  await expect(removeDishSoap).toBeVisible();
+
+  await expectTapTarget(decreaseDishSoap);
+  await expectTapTarget(increaseDishSoap);
+  await expectTapTarget(removeDishSoap);
+
+  await restockTab.click();
+  const restockDishSoap = page.getByRole("button", { name: "Restock Dish Soap" });
+  const restockShown = page.getByRole("button", {
+    name: "Restock all shown low-stock items",
+  });
+
+  await expect(restockDishSoap).toBeVisible();
+  await expect(restockShown).toBeVisible();
+  await expectTapTarget(restockDishSoap);
+  await expectTapTarget(restockShown);
 });
 
 test("plus/minus controls update quantity", async ({ page }) => {

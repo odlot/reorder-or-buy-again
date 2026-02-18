@@ -80,6 +80,7 @@
 - [x] Persist and restore file-handle permission across sessions where supported.
 - [x] Add automated tests for explicit same-timestamp conflict resolution path.
 - [x] Add `Clear Sync Link` action in Settings.
+- [ ] Add same-device cross-tab sync via `storage` events with snapshot revision guards and e2e coverage.
 
 ## Suggested Implementation Order
 

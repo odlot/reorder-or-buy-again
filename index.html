@@ -32,6 +32,7 @@
           id="restock-all-button"
           class="action-button restock-all-button hidden"
           type="button"
+          aria-label="Restock all shown low-stock items"
         >
           Restock shown
         </button>
@@ -48,7 +49,13 @@
             placeholder="Quick add item"
           />
 
-          <button class="action-button primary-button" type="submit">Add</button>
+          <button
+            class="action-button primary-button"
+            type="submit"
+            aria-label="Add item to inventory"
+          >
+            Add
+          </button>
         </form>
         <p id="quick-add-message" class="quick-add-message" aria-live="polite"></p>
       </section>
@@ -87,13 +94,19 @@
             Last synced: never
           </p>
           <div class="settings-actions sync-actions">
-            <button id="link-sync-button" class="action-button" type="button">
+            <button
+              id="link-sync-button"
+              class="action-button"
+              type="button"
+              aria-label="Link offline sync file"
+            >
               Link Sync File
             </button>
             <button
               id="sync-now-button"
               class="action-button primary-button"
               type="button"
+              aria-label="Sync inventory now"
             >
               Sync Now
             </button>
@@ -101,6 +114,7 @@
               id="clear-sync-link-button"
               class="action-button danger-button sync-clear-button"
               type="button"
+              aria-label="Clear offline sync file link"
             >
               Clear Sync Link
             </button>
@@ -108,12 +122,22 @@
         </section>
 
         <section class="settings-actions">
-          <button id="export-data-button" class="action-button" type="button">
+          <button
+            id="export-data-button"
+            class="action-button"
+            type="button"
+            aria-label="Export inventory backup"
+          >
             Export Backup
           </button>
-          <label class="action-button file-picker" for="import-data-input">
+          <button
+            id="import-data-button"
+            class="action-button file-picker"
+            type="button"
+            aria-label="Import inventory backup"
+          >
             Import Backup
-          </label>
+          </button>
           <input
             id="import-data-input"
             class="sr-only"
@@ -124,6 +148,7 @@
             id="reset-data-button"
             class="action-button danger-button"
             type="button"
+            aria-label="Reset local inventory data"
           >
             Reset Local Data
           </button>
@@ -138,21 +163,39 @@
           type="button"
           data-view="all"
           aria-current="page"
+          aria-label="Open all items view"
         >
           All
         </button>
-        <button class="nav-tab" type="button" data-view="restock">
+        <button
+          class="nav-tab"
+          type="button"
+          data-view="restock"
+          aria-label="Open restock view"
+        >
           Restock
           <span id="restock-badge" class="badge hidden" aria-live="polite">0</span>
         </button>
-        <button class="nav-tab" type="button" data-view="settings">
+        <button
+          class="nav-tab"
+          type="button"
+          data-view="settings"
+          aria-label="Open settings view"
+        >
           Settings
         </button>
       </nav>
 
       <div id="undo-toast" class="undo-toast hidden" role="status" aria-live="polite">
         <span id="undo-message">Item removed.</span>
-        <button id="undo-button" class="undo-button" type="button">Undo</button>
+        <button
+          id="undo-button"
+          class="undo-button"
+          type="button"
+          aria-label="Undo remove item"
+        >
+          Undo
+        </button>
       </div>
     </main>
 

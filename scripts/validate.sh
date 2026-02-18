@@ -34,6 +34,15 @@ for file in tests/e2e/*.spec.js; do
   node --check "$file"
 done
 
+for file in scripts/*.sh; do
+  if [[ ! -f "$file" ]]; then
+    continue
+  fi
+
+  echo "Checking $file"
+  bash -n "$file"
+done
+
 echo "Running tests"
 node --test tests/*.test.js
 

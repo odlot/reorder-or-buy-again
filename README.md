@@ -49,6 +49,12 @@ Notes:
 CI_LOCAL_WITH_DEPS=1 npm run ci:local
 ```
 
+Prepare a release (from `main`) with automated changelog + tag creation:
+
+```bash
+npm run release -- 0.1.0
+```
+
 In GitHub Actions CI, Playwright debug artifacts (`playwright-report/`, `test-results/`) are uploaded automatically when e2e fails.
 
 ## Versioning and Changelog

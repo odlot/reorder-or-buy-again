@@ -78,6 +78,7 @@ const syncNowButton = document.querySelector("#sync-now-button");
 const clearSyncLinkButton = document.querySelector("#clear-sync-link-button");
 const settingsMessage = document.querySelector("#settings-message");
 const exportDataButton = document.querySelector("#export-data-button");
+const importDataButton = document.querySelector("#import-data-button");
 const importDataInput = document.querySelector("#import-data-input");
 const resetDataButton = document.querySelector("#reset-data-button");
 
@@ -1119,6 +1120,10 @@ quickAddForm.addEventListener("submit", (event) => {
 
 exportDataButton.addEventListener("click", () => {
   exportBackup();
+});
+
+importDataButton.addEventListener("click", () => {
+  importDataInput.click();
 });
 
 importDataInput.addEventListener("change", async (event) => {
