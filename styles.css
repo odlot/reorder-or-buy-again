@@ -1,4 +1,6 @@
 :root {
+  color-scheme: light;
+  --bg-flare: #fefbf5;
   --bg-top: #f7f4ee;
   --bg-bottom: #eef2e8;
   --panel: #ffffffd9;
@@ -13,6 +15,23 @@
   --low-text: #7a4f16;
   --danger: #ad3e2f;
   --viewport-offset-bottom: 0px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-flare: #1a241e;
+  --bg-top: #0f1412;
+  --bg-bottom: #141b17;
+  --panel: #1b231fd9;
+  --text: #e5ece7;
+  --muted: #a2afa7;
+  --line: #394640;
+  --accent: #8dc7a3;
+  --focus-ring: #93d0aa;
+  --focus-halo: #93d0aa33;
+  --low-bg: #3b2f1a;
+  --low-text: #ffd699;
+  --danger: #ff988b;
 }
 
 *,
@@ -33,7 +52,7 @@ body {
   font-family: "Avenir Next", "Segoe UI", "Noto Sans", sans-serif;
   background: radial-gradient(
       circle at 20% -10%,
-      #fefbf5 0%,
+      var(--bg-flare) 0%,
       transparent 35%
     ),
     linear-gradient(to bottom, var(--bg-top), var(--bg-bottom));
@@ -64,7 +83,7 @@ body {
   min-height: 1.7rem;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fbfcf9;
+  background: var(--panel);
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 700;
@@ -138,6 +157,7 @@ body {
 .step-button:focus-visible,
 .remove-button:focus-visible,
 .settings-view input:focus-visible,
+.settings-view select:focus-visible,
 .action-button:focus-visible,
 .undo-button:focus-visible,
 .nav-tab:focus-visible {
@@ -232,7 +252,7 @@ body {
 .remove-button {
   border: 1px solid var(--line);
   border-radius: 0.75rem;
-  background: #fff;
+  background: var(--panel);
   color: var(--text);
   min-height: 2.9rem;
   font-size: 1.05rem;
@@ -259,7 +279,7 @@ body {
   min-height: 2.9rem;
   border: 1px solid var(--line);
   border-radius: 0.75rem;
-  background: #fff;
+  background: var(--panel);
   color: var(--text);
   text-align: center;
   font-size: 1rem;
@@ -300,13 +320,14 @@ body {
   color: var(--muted);
 }
 
-.settings-view input {
+.settings-view input,
+.settings-view select {
   width: 100%;
   margin-top: 0.35rem;
   height: 2.8rem;
   border: 1px solid var(--line);
   border-radius: 0.75rem;
-  background: #fff;
+  background: var(--panel);
   color: var(--text);
   padding: 0 0.75rem;
   font-size: 0.96rem;
@@ -335,7 +356,7 @@ body {
   min-height: var(--tap-target);
   border: 1px solid var(--line);
   border-radius: 0.75rem;
-  background: #fff;
+  background: var(--panel);
   color: var(--text);
   font-size: 0.92rem;
   font-weight: 600;
@@ -401,7 +422,7 @@ body {
   gap: 0.7rem;
   border: 1px solid #d8dfd0;
   border-radius: 0.85rem;
-  background: #fefefb;
+  background: var(--panel);
   box-shadow: 0 8px 26px #00000014;
   padding: 0.7rem 0.8rem;
   z-index: 40;
@@ -448,7 +469,7 @@ body {
   margin-top: 1rem;
   border: 1px solid var(--line);
   border-radius: 1rem;
-  background: #fffffff2;
+  background: var(--panel);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0.35rem;
@@ -514,6 +535,64 @@ body {
   padding: 0;
   clip: rect(0 0 0 0);
   overflow: hidden;
+}
+
+:root[data-theme="dark"] .sync-chip.is-synced {
+  border-color: #4e6f58;
+  background: #1f3025;
+  color: #b7e8c7;
+}
+
+:root[data-theme="dark"] .sync-chip.is-syncing {
+  border-color: #4b5750;
+  background: #1e2622;
+  color: #bec9c2;
+}
+
+:root[data-theme="dark"] .sync-chip.is-offline {
+  border-color: #525863;
+  background: #1f232a;
+  color: #c0c5d2;
+}
+
+:root[data-theme="dark"] .sync-chip.is-conflict {
+  border-color: #7c504a;
+  background: #33201e;
+  color: #ffb3aa;
+}
+
+:root[data-theme="dark"] .primary-button,
+:root[data-theme="dark"] .restock-button,
+:root[data-theme="dark"] .restock-all-button {
+  border-color: #4e6f58;
+  background: #203126;
+  color: #b7e8c7;
+}
+
+:root[data-theme="dark"] .undo-button {
+  border-color: #4e6f58;
+  background: #203126;
+  color: #b7e8c7;
+}
+
+:root[data-theme="dark"] .undo-toast.is-success {
+  border-color: #4e6f58;
+  background: #1d2a22;
+}
+
+:root[data-theme="dark"] .undo-toast.is-error {
+  border-color: #7c504a;
+  background: #33201e;
+}
+
+:root[data-theme="dark"] .undo-toast.is-success span {
+  color: #b7e8c7;
+}
+
+:root[data-theme="dark"] .nav-tab.is-active {
+  border-color: #4e6f58;
+  background: #203126;
+  color: #b7e8c7;
 }
 
 @media (min-width: 700px) {

@@ -16,6 +16,7 @@ export const dom = {
   undoMessage: document.querySelector("#undo-message"),
   undoButton: document.querySelector("#undo-button"),
   defaultThresholdInput: document.querySelector("#default-threshold-input"),
+  themeModeInput: document.querySelector("#theme-mode-input"),
   syncStatusDetail: document.querySelector("#sync-status-detail"),
   syncLastSynced: document.querySelector("#sync-last-synced"),
   linkSyncButton: document.querySelector("#link-sync-button"),

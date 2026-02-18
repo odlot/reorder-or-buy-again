@@ -26,6 +26,7 @@ export function bindAppEvents({
   const {
     searchInput,
     defaultThresholdInput,
+    themeModeInput,
     quickAddForm,
     exportDataButton,
     importDataButton,
@@ -50,6 +51,14 @@ export function bindAppEvents({
     setSettingsNotice("Default threshold updated.", "success");
     persistAndRender();
   });
+
+  if (themeModeInput) {
+    themeModeInput.addEventListener("change", (event) => {
+      state.settings.themeMode = event.target.value === "dark" ? "dark" : "light";
+      setSettingsNotice("Theme updated.", "success");
+      persistAndRender();
+    });
+  }
 
   quickAddForm.addEventListener("submit", (event) => {
     event.preventDefault();
