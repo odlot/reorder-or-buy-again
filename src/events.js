@@ -20,6 +20,7 @@ export function bindAppEvents({
   deleteItemById,
   commitQuantityFromInput,
   undoDelete,
+  onStorageStateChange,
   updateViewportOffsetBottom,
 }) {
   const {
@@ -199,6 +200,7 @@ export function bindAppEvents({
     undoDelete();
   });
 
+  window.addEventListener("storage", onStorageStateChange);
   window.addEventListener("resize", updateViewportOffsetBottom);
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", updateViewportOffsetBottom);
