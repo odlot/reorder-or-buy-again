@@ -289,6 +289,17 @@ body {
   gap: 0.45rem;
 }
 
+.item-edit-field {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.item-edit-field-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .item-edit-name-input,
 .item-edit-threshold-input {
   width: 100%;

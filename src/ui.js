@@ -35,30 +35,36 @@ export function renderList(container, items, { editingItemId = "" } = {}) {
                   value="${safeName}"
                   aria-label="Description for ${safeName}"
                 />
-                <label class="sr-only" for="edit-threshold-${safeItemId}">Low threshold</label>
-                <input
-                  id="edit-threshold-${safeItemId}"
-                  class="item-edit-threshold-input"
-                  type="number"
-                  name="lowThreshold"
-                  inputmode="numeric"
-                  min="0"
-                  step="1"
-                  value="${item.lowThreshold}"
-                  aria-label="Low threshold for ${safeName}"
-                />
-                <label class="sr-only" for="edit-target-${safeItemId}">Target quantity</label>
-                <input
-                  id="edit-target-${safeItemId}"
-                  class="item-edit-threshold-input"
-                  type="number"
-                  name="targetQuantity"
-                  inputmode="numeric"
-                  min="0"
-                  step="1"
-                  value="${item.targetQuantity}"
-                  aria-label="Target quantity for ${safeName}"
-                />
+                <div class="item-edit-field">
+                  <label class="item-edit-field-label" for="edit-threshold-${safeItemId}">
+                    Low threshold
+                  </label>
+                  <input
+                    id="edit-threshold-${safeItemId}"
+                    class="item-edit-threshold-input"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    name="lowThreshold"
+                    value="${item.lowThreshold}"
+                    aria-label="Low threshold for ${safeName}"
+                  />
+                </div>
+                <div class="item-edit-field">
+                  <label class="item-edit-field-label" for="edit-target-${safeItemId}">
+                    Target quantity
+                  </label>
+                  <input
+                    id="edit-target-${safeItemId}"
+                    class="item-edit-threshold-input"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    name="targetQuantity"
+                    value="${item.targetQuantity}"
+                    aria-label="Target quantity for ${safeName}"
+                  />
+                </div>
                 <div class="item-edit-actions">
                   <button class="action-button primary-button" type="submit" aria-label="Save edits for ${safeName}">
                     Save
