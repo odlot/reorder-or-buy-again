@@ -11,6 +11,8 @@ export const dom = {
   shoppingList: document.querySelector("#shopping-list"),
   summaryLine: document.querySelector("#summary-line"),
   shoppingSummaryLine: document.querySelector("#shopping-summary-line"),
+  copyShoppingButton: document.querySelector("#copy-shopping-button"),
+  shareShoppingButton: document.querySelector("#share-shopping-button"),
   applyPurchasedButton: document.querySelector("#apply-purchased-button"),
   emptyState: document.querySelector("#empty-state"),
   shoppingEmptyState: document.querySelector("#shopping-empty-state"),

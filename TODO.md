@@ -38,6 +38,7 @@
 - [x] Create dedicated "Shopping" view with only low items.
 - [x] Show low-stock count badge in navigation.
 - [x] Add adjustable planned-buy quantities + apply flow for low-stock items.
+- [x] Add share/copy actions for shopping lists.
 
 ### 5. Multi-View Navigation
 
@@ -84,6 +85,15 @@
 - [x] Add automated tests for explicit same-timestamp conflict resolution path.
 - [x] Add `Clear Sync Link` action in Settings.
 - [x] Add same-device cross-tab sync via `storage` events with snapshot revision guards and e2e coverage.
+
+### 11. Shopping Context + Validation Cadence
+
+- [ ] Add per-item purchase source/category tags (e.g., mall, online, specialty store).
+- [ ] Add per-item storage room/location field (e.g., kitchen, laundry, garage).
+- [ ] Add category/source and room filters in inventory and shopping views.
+- [ ] Keep and surface `updatedAt` in the UI for inventory validation checks.
+- [ ] Add reminder scheduling for periodic quantity confirmation.
+- [ ] Track per-item quantity confirmation metadata (`lastCheckedAt`, `checkIntervalDays`).
 
 ## Suggested Implementation Order
 
