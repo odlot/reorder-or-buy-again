@@ -53,6 +53,9 @@ const THEME_MODES = {
   LIGHT: "light",
   DARK: "dark",
 };
+const SUPPORTS_WEB_SHARE =
+  typeof navigator !== "undefined" &&
+  typeof navigator.share === "function";
 const DELETE_UNDO_MS = 8000;
 const TOAST_AUTO_HIDE_MS = 2600;
 
@@ -71,6 +74,8 @@ const {
   shoppingList,
   summaryLine,
   shoppingSummaryLine,
+  copyShoppingButton,
+  shareShoppingButton,
   applyPurchasedButton,
   emptyState,
   shoppingEmptyState,
@@ -133,6 +138,72 @@ function getShoppingItems() {
 
 function getNeededQuantity(item) {
   return Math.max(0, item.targetQuantity - item.quantity);
+}
+
+function getShoppingShareEntries() {
+  const shoppingItems = getShoppingItems();
+  const buyQuantityByItemId = getPrunedBuyQuantityByItemId(
+    state.items,
+    state.shopping.buyQuantityByItemId
+  );
+
+  return shoppingItems
+    .map((item) => {
+      const neededQuantity = getNeededQuantity(item);
+      const plannedQuantity = clampQuantity(buyQuantityByItemId[item.id]);
+      const quantityToBuy = plannedQuantity > 0 ? plannedQuantity : neededQuantity;
+      return {
+        name: item.name,
+        quantityToBuy,
+        neededQuantity,
+      };
+    })
+    .filter((entry) => entry.quantityToBuy > 0);
+}
+
+function buildShoppingListText(entries = getShoppingShareEntries()) {
+  const generatedAt = new Date().toLocaleDateString();
+  const lines = entries.map(
+    (entry) =>
+      `- ${entry.name}: ${entry.quantityToBuy} (${entry.neededQuantity} needed)`
+  );
+  return [`Shopping list - ${generatedAt}`, "", ...lines].join("\n");
+}
+
+async function copyTextToClipboard(text) {
+  if (
+    navigator.clipboard &&
+    typeof navigator.clipboard.writeText === "function"
+  ) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fall through to legacy copy path.
+    }
+  }
+
+  const copyBuffer = document.createElement("textarea");
+  copyBuffer.value = text;
+  copyBuffer.setAttribute("readonly", "");
+  copyBuffer.style.position = "fixed";
+  copyBuffer.style.opacity = "0";
+  copyBuffer.style.pointerEvents = "none";
+  document.body.appendChild(copyBuffer);
+  copyBuffer.focus();
+  copyBuffer.select();
+  copyBuffer.setSelectionRange(0, copyBuffer.value.length);
+
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    copied = false;
+  } finally {
+    copyBuffer.remove();
+  }
+
+  return copied;
 }
 
 function getPrunedBuyQuantityByItemId(items, buyQuantityByItemId) {
@@ -658,6 +729,11 @@ function renderShoppingPanel() {
   state.shopping = { buyQuantityByItemId };
   renderShoppingList(shoppingList, shoppingItems, buyQuantityByItemId);
   shoppingSummaryLine.textContent = `${shoppingItems.length} low stock • ${plannedUnits} planned (${plannedItemCount} items)`;
+  copyShoppingButton.disabled = shoppingItems.length === 0;
+  shareShoppingButton.disabled = shoppingItems.length === 0;
+  shareShoppingButton.textContent = SUPPORTS_WEB_SHARE
+    ? "Share list"
+    : "Share/Copy";
   applyPurchasedButton.disabled = plannedUnits === 0;
 
   if (shoppingItems.length > 0) {
@@ -956,6 +1032,62 @@ function applyPurchasedItems() {
   persistAndRender({ touchUpdatedAt: true });
 }
 
+async function copyShoppingList() {
+  const shareEntries = getShoppingShareEntries();
+  if (shareEntries.length === 0) {
+    showToast("No shopping items to copy.", "error");
+    render();
+    return;
+  }
+
+  const copied = await copyTextToClipboard(buildShoppingListText(shareEntries));
+  if (!copied) {
+    showToast("Could not copy shopping list.", "error");
+    render();
+    return;
+  }
+
+  showToast("Shopping list copied.", "success");
+  render();
+}
+
+async function shareShoppingList() {
+  const shareEntries = getShoppingShareEntries();
+  if (shareEntries.length === 0) {
+    showToast("No shopping items to share.", "error");
+    render();
+    return;
+  }
+
+  const text = buildShoppingListText(shareEntries);
+  if (SUPPORTS_WEB_SHARE) {
+    try {
+      await navigator.share({
+        title: "Shopping List",
+        text,
+      });
+      showToast("Shopping list shared.", "success");
+      render();
+      return;
+    } catch (error) {
+      if (isAbortError(error)) {
+        return;
+      }
+      // Fall through and try copy as fallback.
+    }
+  }
+
+  const copied = await copyTextToClipboard(text);
+  if (!copied) {
+    showToast("Share unavailable and copy failed.", "error");
+    render();
+    return;
+  }
+
+  showToast("Share unavailable. Shopping list copied instead.", "success");
+  render();
+}
+
 function addItem(input) {
   const name = String(input.name || "").trim();
   if (!name) {
@@ -1233,6 +1365,8 @@ bindAppEvents({
   stepShoppingBuyQuantity,
   commitShoppingBuyFromInput,
   applyPurchasedItems,
+  copyShoppingList,
+  shareShoppingList,
   commitQuantityFromInput,
   undoDelete,
   onStorageStateChange: handleStorageStateChange,

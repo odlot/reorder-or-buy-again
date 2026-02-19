@@ -92,12 +92,18 @@ test("action controls expose labels and finger-sized tap targets", async ({
   const shoppingMax = page.getByRole("button", {
     name: "Set planned quantity for Dish Soap to needed amount",
   });
+  const copyShopping = page.getByRole("button", { name: "Copy shopping list" });
+  const shareShopping = page.getByRole("button", { name: "Share shopping list" });
   await expect(shoppingStepDown).toBeVisible();
   await expect(shoppingStepUp).toBeVisible();
   await expect(shoppingMax).toBeVisible();
+  await expect(copyShopping).toBeVisible();
+  await expect(shareShopping).toBeVisible();
   await expectTapTarget(shoppingStepDown);
   await expectTapTarget(shoppingStepUp);
   await expectTapTarget(shoppingMax);
+  await expectTapTarget(copyShopping);
+  await expectTapTarget(shareShopping);
 });
 
 test("plus/minus controls update quantity", async ({ page }) => {
@@ -169,6 +175,17 @@ test("in-place edit updates description, low threshold, and target", async ({
   await expect(page.locator("#undo-message")).toContainText(
     "Updated description and threshold and target."
   );
+});
+
+test("edit form shows visible labels for threshold and target fields", async ({
+  page,
+}) => {
+  const soapRow = itemRow(page, "Dish Soap");
+  await soapRow.getByRole("button", { name: "Edit Dish Soap" }).click();
+
+  const editForm = page.locator('.item-edit-form[aria-label="Edit Dish Soap"]');
+  await expect(editForm.getByText("Low threshold")).toBeVisible();
+  await expect(editForm.getByText("Target quantity")).toBeVisible();
 });
 
 test("shopping view can plan quantities and apply purchases to inventory", async ({

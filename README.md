@@ -166,7 +166,7 @@ Milestones A, B, and C are implemented:
 - Remove items directly from main list (with undo)
 - Bottom navigation (`All`, `Shopping`, `Settings`) with low-stock badge
 - Dedicated Shopping view (low-stock items only)
-- Shopping planning actions (`+/-`, quantity input, `Max`, `Apply purchases`)
+- Shopping planning actions (`+/-`, quantity input, `Max`, `Apply purchases`, `Copy list`, `Share list`)
 - Settings: default threshold, backup import/export, reset local data
 - Import/export JSON backups
 - Local persistence via `localStorage`

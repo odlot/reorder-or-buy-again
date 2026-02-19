@@ -23,6 +23,8 @@ export function bindAppEvents({
   stepShoppingBuyQuantity,
   commitShoppingBuyFromInput,
   applyPurchasedItems,
+  copyShoppingList,
+  shareShoppingList,
   commitQuantityFromInput,
   undoDelete,
   onStorageStateChange,
@@ -43,6 +45,8 @@ export function bindAppEvents({
     navTabs,
     itemList,
     shoppingList,
+    copyShoppingButton,
+    shareShoppingButton,
     applyPurchasedButton,
     undoButton,
   } = dom;
@@ -99,6 +103,14 @@ export function bindAppEvents({
 
   applyPurchasedButton.addEventListener("click", () => {
     applyPurchasedItems();
+  });
+
+  copyShoppingButton.addEventListener("click", () => {
+    void copyShoppingList();
+  });
+
+  shareShoppingButton.addEventListener("click", () => {
+    void shareShoppingList();
   });
 
   clearSyncLinkButton.addEventListener("click", () => {

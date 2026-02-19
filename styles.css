@@ -331,6 +331,12 @@ body {
   margin: 0;
 }
 
+.shopping-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.45rem;
+}
+
 .shopping-list {
   list-style: none;
   margin: 0.75rem 0 0;
@@ -750,6 +756,10 @@ body {
 
   .shopping-controls {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .shopping-actions {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -65,14 +65,32 @@
       >
         <div class="shopping-toolbar">
           <p id="shopping-summary-line" class="summary-line" aria-live="polite"></p>
-          <button
-            id="apply-purchased-button"
-            class="action-button primary-button"
-            type="button"
-            aria-label="Apply planned purchases to inventory"
-          >
-            Apply purchases
-          </button>
+          <div class="shopping-actions">
+            <button
+              id="copy-shopping-button"
+              class="action-button"
+              type="button"
+              aria-label="Copy shopping list"
+            >
+              Copy list
+            </button>
+            <button
+              id="share-shopping-button"
+              class="action-button"
+              type="button"
+              aria-label="Share shopping list"
+            >
+              Share list
+            </button>
+            <button
+              id="apply-purchased-button"
+              class="action-button primary-button"
+              type="button"
+              aria-label="Apply planned purchases to inventory"
+            >
+              Apply purchases
+            </button>
+          </div>
         </div>
         <ul id="shopping-list" class="shopping-list"></ul>
         <p id="shopping-empty-state" class="empty-state hidden">
