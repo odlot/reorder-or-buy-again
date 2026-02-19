@@ -46,7 +46,6 @@ import {
 
 const VIEWS = {
   ALL: "all",
-  RESTOCK: "restock",
   SHOPPING: "shopping",
   SETTINGS: "settings",
 };
@@ -72,12 +71,11 @@ const {
   shoppingList,
   summaryLine,
   shoppingSummaryLine,
-  restockAllButton,
   applyPurchasedButton,
   emptyState,
   shoppingEmptyState,
   navTabs,
-  restockBadge,
+  shoppingBadge,
   undoToast,
   undoMessage,
   undoButton,
@@ -100,6 +98,7 @@ const state = {
   revision: Number.isInteger(initialState.revision) ? initialState.revision : 0,
   query: "",
   activeView: VIEWS.ALL,
+  editingItemId: "",
   toast: {
     text: "",
     tone: "",
@@ -125,11 +124,7 @@ const state = {
 };
 
 function getVisibleItems() {
-  return selectVisibleItems(
-    state.items,
-    state.query,
-    state.activeView === VIEWS.RESTOCK
-  );
+  return selectVisibleItems(state.items, state.query, false);
 }
 
 function getShoppingItems() {
@@ -291,6 +286,7 @@ async function writeSnapshotToLinkedFile(snapshot) {
 function adoptSnapshot(snapshot, { persist = true } = {}) {
   clearPendingDelete();
   clearToast();
+  state.editingItemId = "";
   state.items = snapshot.items;
   state.settings = snapshot.settings;
   state.shopping = snapshot.shopping;
@@ -607,27 +603,25 @@ function renderSettingsPanel() {
 }
 
 function renderInventoryPanel(visibleItems, lowCount) {
-  renderList(itemList, visibleItems);
-  const canBulkRestock =
-    state.activeView === VIEWS.RESTOCK && visibleItems.length > 0;
-  restockAllButton.classList.toggle("hidden", !canBulkRestock);
-
-  if (state.activeView === VIEWS.ALL) {
-    renderSummary(summaryLine, state.items.length, lowCount);
-  } else {
-    summaryLine.textContent = `${visibleItems.length} shown • ${lowCount} low stock total`;
+  if (!state.items.some((item) => item.id === state.editingItemId)) {
+    state.editingItemId = "";
   }
+  if (
+    state.editingItemId &&
+    !visibleItems.some((item) => item.id === state.editingItemId)
+  ) {
+    state.editingItemId = "";
+  }
+
+  renderList(itemList, visibleItems, { editingItemId: state.editingItemId });
+  renderSummary(summaryLine, state.items.length, lowCount);
 
   if (visibleItems.length > 0) {
     toggleEmptyState(emptyState, false);
     return;
   }
 
-  if (state.activeView === VIEWS.RESTOCK && !state.query.trim()) {
-    emptyState.textContent = "No low-stock items right now.";
-  } else {
-    emptyState.textContent = "No items match your search.";
-  }
+  emptyState.textContent = "No items match your search.";
   toggleEmptyState(emptyState, true);
 }
 
@@ -677,8 +671,8 @@ function render() {
     }
   });
 
-  restockBadge.textContent = lowCount > 99 ? "99+" : String(lowCount);
-  restockBadge.classList.toggle("hidden", lowCount === 0);
+  shoppingBadge.textContent = lowCount > 99 ? "99+" : String(lowCount);
+  shoppingBadge.classList.toggle("hidden", lowCount === 0);
   renderSyncStatus();
 
   const hasUndo = Boolean(state.pendingDelete);
@@ -739,61 +733,88 @@ function setQuantity(itemId, nextQuantity) {
   persistAndRender();
 }
 
-function getRestockTargetQuantity(item) {
+function getTargetQuantityAfterPurchase(item) {
   return Math.max(item.quantity, item.lowThreshold + 1);
 }
 
-function restockItemById(itemId) {
+function startEditingItemById(itemId) {
   const item = state.items.find((entry) => entry.id === itemId);
   if (!item) {
     return;
   }
 
-  const targetQuantity = getRestockTargetQuantity(item);
-  if (targetQuantity === item.quantity) {
-    return;
-  }
+  state.editingItemId = itemId;
+  render();
 
-  state.items = updateItemQuantity(state.items, itemId, targetQuantity);
-  showToast(`Restocked ${item.name}.`, "success");
-  setSettingsNotice("", "");
-  persistAndRender();
+  window.requestAnimationFrame(() => {
+    const input = itemList.querySelector(
+      `[data-item-id="${encodeURIComponent(itemId)}"] .item-edit-name-input`
+    );
+    if (input instanceof HTMLInputElement) {
+      input.focus();
+      input.select();
+    }
+  });
 }
 
-function restockVisibleLowItems() {
-  const visibleLowIds = new Set(
-    getVisibleItems().filter(isLowStock).map((item) => item.id)
-  );
-  if (visibleLowIds.size === 0) {
+function cancelEditingItem() {
+  if (!state.editingItemId) {
     return;
   }
 
+  state.editingItemId = "";
+  render();
+}
+
+function saveItemEdits(itemId, input) {
+  const name = String(input.name || "").trim();
+  if (!name) {
+    showToast("Description is required.", "error");
+    render();
+    return;
+  }
+
+  const lowThreshold = clampQuantity(input.lowThreshold);
   const now = new Date().toISOString();
-  let restockedCount = 0;
+  let changedName = false;
+  let changedThreshold = false;
+  let changed = false;
+
   state.items = state.items.map((item) => {
-    if (!visibleLowIds.has(item.id)) {
+    if (item.id !== itemId) {
       return item;
     }
 
-    const targetQuantity = getRestockTargetQuantity(item);
-    if (targetQuantity === item.quantity) {
+    changedName = item.name !== name;
+    changedThreshold = item.lowThreshold !== lowThreshold;
+    changed = changedName || changedThreshold;
+    if (!changed) {
       return item;
     }
 
-    restockedCount += 1;
     return {
       ...item,
-      quantity: targetQuantity,
+      name,
+      lowThreshold,
       updatedAt: now,
     };
   });
 
-  if (restockedCount === 0) {
+  state.editingItemId = "";
+  if (!changed) {
+    render();
     return;
   }
 
-  const noun = restockedCount === 1 ? "item" : "items";
-  showToast(`Restocked ${restockedCount} ${noun}.`, "success");
+  const changedParts = [];
+  if (changedName) {
+    changedParts.push("description");
+  }
+  if (changedThreshold) {
+    changedParts.push("threshold");
+  }
+
+  showToast(`Updated ${changedParts.join(" and ")}.`, "success");
   setSettingsNotice("", "");
   persistAndRender({ touchUpdatedAt: true });
 }
@@ -838,7 +859,7 @@ function applyPurchasedItems() {
       return item;
     }
 
-    const targetQuantity = getRestockTargetQuantity(item);
+    const targetQuantity = getTargetQuantityAfterPurchase(item);
     if (targetQuantity === item.quantity) {
       return item;
     }
@@ -978,6 +999,9 @@ function deleteItemById(itemId) {
 
   scheduleUndo(snapshot, index);
   state.items = removeItem(state.items, itemId);
+  if (state.editingItemId === itemId) {
+    state.editingItemId = "";
+  }
   setSettingsNotice("", "");
   persistAndRender();
 }
@@ -1040,6 +1064,7 @@ async function importBackupFile(file) {
     const imported = deserializeState(text);
 
     clearPendingDelete();
+    state.editingItemId = "";
     state.items = imported.items;
     state.settings = imported.settings;
     state.shopping = imported.shopping;
@@ -1065,6 +1090,7 @@ function resetLocalData() {
 
   const defaults = createDefaultState();
   clearPendingDelete();
+  state.editingItemId = "";
   state.items = defaults.items;
   state.settings = defaults.settings;
   state.shopping = defaults.shopping;
@@ -1125,12 +1151,13 @@ bindAppEvents({
   resetLocalData,
   linkSyncFile,
   syncWithLinkedFile,
-  restockVisibleLowItems,
   clearSyncLink,
   decodeItemId,
   setQuantity,
-  restockItemById,
   deleteItemById,
+  startEditingItemById,
+  cancelEditingItem,
+  saveItemEdits,
   togglePurchasedByItemId,
   applyPurchasedItems,
   commitQuantityFromInput,

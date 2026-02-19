@@ -26,8 +26,8 @@ export function matchesSearch(item, query) {
   return item.name.toLowerCase().includes(query.trim().toLowerCase());
 }
 
-export function selectVisibleItems(items, query, restockOnly = false) {
-  const sourceItems = restockOnly ? items.filter(isLowStock) : items;
+export function selectVisibleItems(items, query, lowStockOnly = false) {
+  const sourceItems = lowStockOnly ? items.filter(isLowStock) : items;
 
   return sourceItems
     .filter((item) => matchesSearch(item, query))
