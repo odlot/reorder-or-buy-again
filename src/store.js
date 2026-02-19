@@ -13,6 +13,7 @@ const STARTER_ITEMS = [
     name: "Dish Soap",
     quantity: 1,
     lowThreshold: 1,
+    targetQuantity: 2,
     category: "Kitchen",
     updatedAt: new Date().toISOString(),
   },
@@ -21,6 +22,7 @@ const STARTER_ITEMS = [
     name: "Toothpaste",
     quantity: 2,
     lowThreshold: 1,
+    targetQuantity: 3,
     category: "Bathroom",
     updatedAt: new Date().toISOString(),
   },
@@ -29,6 +31,7 @@ const STARTER_ITEMS = [
     name: "Trash Bags",
     quantity: 6,
     lowThreshold: 3,
+    targetQuantity: 7,
     category: "Kitchen",
     updatedAt: new Date().toISOString(),
   },
@@ -37,6 +40,7 @@ const STARTER_ITEMS = [
     name: "Paper Towels",
     quantity: 2,
     lowThreshold: 2,
+    targetQuantity: 3,
     category: "Kitchen",
     updatedAt: new Date().toISOString(),
   },
@@ -45,6 +49,7 @@ const STARTER_ITEMS = [
     name: "Laundry Detergent",
     quantity: 1,
     lowThreshold: 1,
+    targetQuantity: 2,
     category: "Laundry",
     updatedAt: new Date().toISOString(),
   },
@@ -74,7 +79,7 @@ function createDefaultSettings() {
 
 function createDefaultShopping() {
   return {
-    purchasedByItemId: {},
+    buyQuantityByItemId: {},
   };
 }
 
@@ -112,21 +117,35 @@ function normalizeSettings(settings) {
 
 function normalizeShopping(shopping) {
   const source = shopping && typeof shopping === "object" ? shopping : {};
-  const purchasedSource =
+  const buyQuantitySource =
+    source.buyQuantityByItemId && typeof source.buyQuantityByItemId === "object"
+      ? source.buyQuantityByItemId
+      : {};
+  const legacyPurchasedSource =
     source.purchasedByItemId && typeof source.purchasedByItemId === "object"
       ? source.purchasedByItemId
       : {};
-  const purchasedByItemId = {};
+  const buyQuantityByItemId = {};
 
-  for (const [itemId, purchased] of Object.entries(purchasedSource)) {
+  for (const [itemId, buyQuantity] of Object.entries(buyQuantitySource)) {
     const normalizedId = String(itemId || "").trim();
-    if (!normalizedId || !purchased) {
+    const normalizedQuantity = clampQuantity(buyQuantity);
+    if (!normalizedId || normalizedQuantity <= 0) {
       continue;
     }
-    purchasedByItemId[normalizedId] = true;
+    buyQuantityByItemId[normalizedId] = normalizedQuantity;
   }
 
-  return { purchasedByItemId };
+  // Backward compatibility for old shopping snapshots that only tracked checked state.
+  for (const [itemId, purchased] of Object.entries(legacyPurchasedSource)) {
+    const normalizedId = String(itemId || "").trim();
+    if (!normalizedId || !purchased || buyQuantityByItemId[normalizedId]) {
+      continue;
+    }
+    buyQuantityByItemId[normalizedId] = 1;
+  }
+
+  return { buyQuantityByItemId };
 }
 
 export function normalizeItem(item, settings = DEFAULT_SETTINGS) {
@@ -144,14 +163,24 @@ export function normalizeItem(item, settings = DEFAULT_SETTINGS) {
     source.lowThreshold !== undefined &&
     source.lowThreshold !== null &&
     source.lowThreshold !== "";
+  const hasExplicitTarget =
+    source.targetQuantity !== undefined &&
+    source.targetQuantity !== null &&
+    source.targetQuantity !== "";
+  const lowThreshold = hasExplicitThreshold
+    ? clampQuantity(source.lowThreshold)
+    : fallbackThreshold;
+  const targetQuantity = Math.max(
+    hasExplicitTarget ? clampQuantity(source.targetQuantity) : lowThreshold + 1,
+    lowThreshold + 1
+  );
 
   return {
     id: String(source.id || createId()),
     name,
     quantity: clampQuantity(source.quantity),
-    lowThreshold: hasExplicitThreshold
-      ? clampQuantity(source.lowThreshold)
-      : fallbackThreshold,
+    lowThreshold,
+    targetQuantity,
     category: String(source.category || "").trim(),
     updatedAt: String(source.updatedAt || new Date().toISOString()),
   };
@@ -262,13 +291,21 @@ export function upsertItem(items, itemInput, settings = DEFAULT_SETTINGS) {
     source.lowThreshold !== undefined &&
     source.lowThreshold !== null &&
     source.lowThreshold !== "";
+  const hasExplicitTarget =
+    source.targetQuantity !== undefined &&
+    source.targetQuantity !== null &&
+    source.targetQuantity !== "";
+  const normalizedLowThreshold = hasExplicitThreshold
+    ? clampQuantity(source.lowThreshold)
+    : clampQuantity(settings.defaultLowThreshold);
 
   const normalized = normalizeItem(
     {
       ...source,
-      lowThreshold: hasExplicitThreshold
-        ? source.lowThreshold
-        : settings.defaultLowThreshold,
+      lowThreshold: normalizedLowThreshold,
+      targetQuantity: hasExplicitTarget
+        ? source.targetQuantity
+        : normalizedLowThreshold + 1,
     },
     settings
   );

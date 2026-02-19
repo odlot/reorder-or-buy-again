@@ -72,7 +72,7 @@ In GitHub Actions CI, Playwright debug artifacts (`playwright-report/`, `test-re
 #### v0.1.0 - 2026-02-18
 
 - Mobile-first inventory management with fast quantity controls.
-- Shopping-focused low-stock workflow with purchased checklist.
+- Shopping-focused low-stock workflow with planned buy quantities.
 - Local persistence via `localStorage`.
 - Offline file sync mode with status chip, conflict handling, and clear link action.
 - CI pipeline with validate + Playwright e2e + GitHub Pages deployment.
@@ -166,7 +166,7 @@ Milestones A, B, and C are implemented:
 - Remove items directly from main list (with undo)
 - Bottom navigation (`All`, `Shopping`, `Settings`) with low-stock badge
 - Dedicated Shopping view (low-stock items only)
-- Shopping checklist actions (`Apply purchased`)
+- Shopping planning actions (`+/-`, quantity input, `Max`, `Apply purchases`)
 - Settings: default threshold, backup import/export, reset local data
 - Import/export JSON backups
 - Local persistence via `localStorage`

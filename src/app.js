@@ -131,31 +131,49 @@ function getShoppingItems() {
   return selectVisibleItems(state.items, "", true);
 }
 
-function getPrunedPurchasedByItemId(items, purchasedByItemId) {
-  const lowStockIds = new Set(items.filter(isLowStock).map((item) => item.id));
-  const source =
-    purchasedByItemId && typeof purchasedByItemId === "object"
-      ? purchasedByItemId
-      : {};
-  const nextPurchasedByItemId = {};
-
-  for (const [itemId, purchased] of Object.entries(source)) {
-    if (!purchased || !lowStockIds.has(itemId)) {
-      continue;
-    }
-    nextPurchasedByItemId[itemId] = true;
-  }
-
-  return nextPurchasedByItemId;
+function getNeededQuantity(item) {
+  return Math.max(0, item.targetQuantity - item.quantity);
 }
 
-function reconcileShoppingSelections() {
-  const purchasedByItemId =
+function getPrunedBuyQuantityByItemId(items, buyQuantityByItemId) {
+  const lowStockItemMap = new Map(
+    items.filter(isLowStock).map((item) => [item.id, item])
+  );
+  const source =
+    buyQuantityByItemId && typeof buyQuantityByItemId === "object"
+      ? buyQuantityByItemId
+      : {};
+  const nextBuyQuantityByItemId = {};
+
+  for (const [itemId, buyQuantity] of Object.entries(source)) {
+    const item = lowStockItemMap.get(itemId);
+    if (!item) {
+      continue;
+    }
+
+    const neededQuantity = getNeededQuantity(item);
+    if (neededQuantity <= 0) {
+      continue;
+    }
+
+    const normalizedBuyQuantity = clampQuantity(buyQuantity);
+    if (normalizedBuyQuantity <= 0) {
+      continue;
+    }
+
+    nextBuyQuantityByItemId[itemId] = Math.min(normalizedBuyQuantity, neededQuantity);
+  }
+
+  return nextBuyQuantityByItemId;
+}
+
+function reconcileShoppingPlan() {
+  const buyQuantityByItemId =
     state.shopping && typeof state.shopping === "object"
-      ? state.shopping.purchasedByItemId
+      ? state.shopping.buyQuantityByItemId
       : {};
   state.shopping = {
-    purchasedByItemId: getPrunedPurchasedByItemId(state.items, purchasedByItemId),
+    buyQuantityByItemId: getPrunedBuyQuantityByItemId(state.items, buyQuantityByItemId),
   };
 }
 
@@ -290,7 +308,7 @@ function adoptSnapshot(snapshot, { persist = true } = {}) {
   state.items = snapshot.items;
   state.settings = snapshot.settings;
   state.shopping = snapshot.shopping;
-  reconcileShoppingSelections();
+  reconcileShoppingPlan();
   state.updatedAt = snapshot.updatedAt || new Date().toISOString();
   state.revision = Number.isInteger(snapshot.revision)
     ? snapshot.revision
@@ -627,18 +645,20 @@ function renderInventoryPanel(visibleItems, lowCount) {
 
 function renderShoppingPanel() {
   const shoppingItems = getShoppingItems();
-  const purchasedByItemId = getPrunedPurchasedByItemId(
+  const buyQuantityByItemId = getPrunedBuyQuantityByItemId(
     state.items,
-    state.shopping.purchasedByItemId
+    state.shopping.buyQuantityByItemId
   );
-  const purchasedCount = shoppingItems.filter(
-    (item) => purchasedByItemId[item.id]
-  ).length;
+  const plannedUnits = Object.values(buyQuantityByItemId).reduce(
+    (sum, value) => sum + value,
+    0
+  );
+  const plannedItemCount = Object.keys(buyQuantityByItemId).length;
 
-  state.shopping = { purchasedByItemId };
-  renderShoppingList(shoppingList, shoppingItems, purchasedByItemId);
-  shoppingSummaryLine.textContent = `${shoppingItems.length} to buy • ${purchasedCount} purchased`;
-  applyPurchasedButton.disabled = purchasedCount === 0;
+  state.shopping = { buyQuantityByItemId };
+  renderShoppingList(shoppingList, shoppingItems, buyQuantityByItemId);
+  shoppingSummaryLine.textContent = `${shoppingItems.length} low stock • ${plannedUnits} planned (${plannedItemCount} items)`;
+  applyPurchasedButton.disabled = plannedUnits === 0;
 
   if (shoppingItems.length > 0) {
     toggleEmptyState(shoppingEmptyState, false);
@@ -706,7 +726,7 @@ function render() {
 }
 
 function persistAndRender({ touchUpdatedAt = true, queueSync = true } = {}) {
-  reconcileShoppingSelections();
+  reconcileShoppingPlan();
   if (touchUpdatedAt) {
     state.updatedAt = new Date().toISOString();
   }
@@ -731,10 +751,6 @@ function persistAndRender({ touchUpdatedAt = true, queueSync = true } = {}) {
 function setQuantity(itemId, nextQuantity) {
   state.items = updateItemQuantity(state.items, itemId, nextQuantity);
   persistAndRender();
-}
-
-function getTargetQuantityAfterPurchase(item) {
-  return Math.max(item.quantity, item.lowThreshold + 1);
 }
 
 function startEditingItemById(itemId) {
@@ -775,9 +791,14 @@ function saveItemEdits(itemId, input) {
   }
 
   const lowThreshold = clampQuantity(input.lowThreshold);
+  const targetQuantity = Math.max(
+    clampQuantity(input.targetQuantity),
+    lowThreshold + 1
+  );
   const now = new Date().toISOString();
   let changedName = false;
   let changedThreshold = false;
+  let changedTarget = false;
   let changed = false;
 
   state.items = state.items.map((item) => {
@@ -787,7 +808,8 @@ function saveItemEdits(itemId, input) {
 
     changedName = item.name !== name;
     changedThreshold = item.lowThreshold !== lowThreshold;
-    changed = changedName || changedThreshold;
+    changedTarget = item.targetQuantity !== targetQuantity;
+    changed = changedName || changedThreshold || changedTarget;
     if (!changed) {
       return item;
     }
@@ -796,6 +818,7 @@ function saveItemEdits(itemId, input) {
       ...item,
       name,
       lowThreshold,
+      targetQuantity,
       updatedAt: now,
     };
   });
@@ -813,74 +836,122 @@ function saveItemEdits(itemId, input) {
   if (changedThreshold) {
     changedParts.push("threshold");
   }
+  if (changedTarget) {
+    changedParts.push("target");
+  }
 
   showToast(`Updated ${changedParts.join(" and ")}.`, "success");
   setSettingsNotice("", "");
   persistAndRender({ touchUpdatedAt: true });
 }
 
-function togglePurchasedByItemId(itemId, purchased) {
+function setShoppingBuyQuantity(itemId, nextBuyQuantity) {
   const item = state.items.find((entry) => entry.id === itemId);
   if (!item || !isLowStock(item)) {
     return;
   }
 
-  const purchasedByItemId = {
-    ...state.shopping.purchasedByItemId,
+  const neededQuantity = getNeededQuantity(item);
+  const buyQuantityByItemId = {
+    ...state.shopping.buyQuantityByItemId,
   };
-  if (purchased) {
-    purchasedByItemId[itemId] = true;
+  const normalizedBuyQuantity = Math.min(
+    clampQuantity(nextBuyQuantity),
+    neededQuantity
+  );
+
+  if (normalizedBuyQuantity > 0) {
+    buyQuantityByItemId[itemId] = normalizedBuyQuantity;
   } else {
-    delete purchasedByItemId[itemId];
+    delete buyQuantityByItemId[itemId];
   }
 
-  state.shopping = { purchasedByItemId };
+  state.shopping = { buyQuantityByItemId };
   persistAndRender();
 }
 
-function applyPurchasedItems() {
-  const purchasedByItemId = getPrunedPurchasedByItemId(
-    state.items,
-    state.shopping.purchasedByItemId
-  );
-  const purchasedIds = new Set(
-    Object.entries(purchasedByItemId)
-      .filter(([, purchased]) => purchased)
-      .map(([itemId]) => itemId)
-  );
-  if (purchasedIds.size === 0) {
+function stepShoppingBuyQuantity(itemId, step) {
+  const increment = Number.parseInt(step, 10);
+  if (Number.isNaN(increment)) {
     return;
   }
 
+  const currentQuantity = clampQuantity(state.shopping.buyQuantityByItemId[itemId]);
+  setShoppingBuyQuantity(itemId, currentQuantity + increment);
+}
+
+function commitShoppingBuyFromInput(input, itemId) {
+  const item = state.items.find((entry) => entry.id === itemId);
+  if (!item || !isLowStock(item)) {
+    return;
+  }
+
+  const previous = input.dataset.previousValue;
+  const restoreBuyQuantity = () => {
+    if (previous && /^\d+$/.test(previous)) {
+      setShoppingBuyQuantity(itemId, previous);
+      return;
+    }
+    setShoppingBuyQuantity(itemId, 0);
+  };
+
+  const raw = input.value.trim();
+  if (!/^\d+$/.test(raw)) {
+    restoreBuyQuantity();
+    return;
+  }
+
+  setShoppingBuyQuantity(itemId, raw);
+}
+
+function applyPurchasedItems() {
+  const buyQuantityByItemId = getPrunedBuyQuantityByItemId(
+    state.items,
+    state.shopping.buyQuantityByItemId
+  );
+  const plannedEntries = Object.entries(buyQuantityByItemId);
+  if (plannedEntries.length === 0) {
+    return;
+  }
+
+  const plannedMap = new Map(plannedEntries);
   const now = new Date().toISOString();
-  let appliedCount = 0;
+  let appliedItemCount = 0;
+  let appliedUnitCount = 0;
   state.items = state.items.map((item) => {
-    if (!purchasedIds.has(item.id)) {
+    const plannedBuyQuantity = plannedMap.get(item.id);
+    if (!plannedBuyQuantity) {
       return item;
     }
 
-    const targetQuantity = getTargetQuantityAfterPurchase(item);
-    if (targetQuantity === item.quantity) {
+    const neededQuantity = getNeededQuantity(item);
+    const appliedQuantity = Math.min(plannedBuyQuantity, neededQuantity);
+    if (appliedQuantity <= 0) {
       return item;
     }
 
-    appliedCount += 1;
+    appliedItemCount += 1;
+    appliedUnitCount += appliedQuantity;
     return {
       ...item,
-      quantity: targetQuantity,
+      quantity: item.quantity + appliedQuantity,
       updatedAt: now,
     };
   });
 
-  state.shopping = { purchasedByItemId: {} };
+  state.shopping = { buyQuantityByItemId: {} };
 
-  if (appliedCount === 0) {
+  if (appliedItemCount === 0) {
     persistAndRender();
     return;
   }
 
-  const noun = appliedCount === 1 ? "item" : "items";
-  showToast(`Applied purchases for ${appliedCount} ${noun}.`, "success");
+  const itemNoun = appliedItemCount === 1 ? "item" : "items";
+  const unitNoun = appliedUnitCount === 1 ? "unit" : "units";
+  showToast(
+    `Applied ${appliedUnitCount} ${unitNoun} across ${appliedItemCount} ${itemNoun}.`,
+    "success"
+  );
   setSettingsNotice("", "");
   persistAndRender({ touchUpdatedAt: true });
 }
@@ -1158,7 +1229,9 @@ bindAppEvents({
   startEditingItemById,
   cancelEditingItem,
   saveItemEdits,
-  togglePurchasedByItemId,
+  setShoppingBuyQuantity,
+  stepShoppingBuyQuantity,
+  commitShoppingBuyFromInput,
   applyPurchasedItems,
   commitQuantityFromInput,
   undoDelete,
