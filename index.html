@@ -28,14 +28,6 @@
           />
         </label>
         <p id="summary-line" class="summary-line" aria-live="polite"></p>
-        <button
-          id="restock-all-button"
-          class="action-button restock-all-button hidden"
-          type="button"
-          aria-label="Restock all shown low-stock items"
-        >
-          Restock shown
-        </button>
 
         <form id="quick-add-form" class="quick-add-form" aria-label="Quick add item">
           <label class="sr-only" for="quick-add-name">Item name</label>
@@ -199,19 +191,11 @@
         <button
           class="nav-tab"
           type="button"
-          data-view="restock"
-          aria-label="Open restock view"
-        >
-          Restock
-          <span id="restock-badge" class="badge hidden" aria-live="polite">0</span>
-        </button>
-        <button
-          class="nav-tab"
-          type="button"
           data-view="shopping"
           aria-label="Open shopping view"
         >
           Shopping
+          <span id="shopping-badge" class="badge hidden" aria-live="polite">0</span>
         </button>
         <button
           class="nav-tab"

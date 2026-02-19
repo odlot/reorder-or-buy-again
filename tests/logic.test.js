@@ -29,7 +29,7 @@ test("matchesSearch is case-insensitive and trims query", () => {
   assert.equal(matchesSearch(item, "soap"), false);
 });
 
-test("selectVisibleItems supports all/restock views and sorting", () => {
+test("selectVisibleItems supports all/low-stock filtering and sorting", () => {
   const items = [
     { id: "a", name: "Toothpaste", quantity: 2, lowThreshold: 1 },
     { id: "b", name: "Dish Soap", quantity: 1, lowThreshold: 1 },
@@ -39,13 +39,13 @@ test("selectVisibleItems supports all/restock views and sorting", () => {
   const allNames = selectVisibleItems(items, "", false).map((item) => item.name);
   assert.deepEqual(allNames, ["Batteries", "Dish Soap", "Toothpaste"]);
 
-  const restockNames = selectVisibleItems(items, "", true).map(
+  const lowStockNames = selectVisibleItems(items, "", true).map(
     (item) => item.name
   );
-  assert.deepEqual(restockNames, ["Batteries", "Dish Soap"]);
+  assert.deepEqual(lowStockNames, ["Batteries", "Dish Soap"]);
 
-  const filteredRestock = selectVisibleItems(items, "dish", true).map(
+  const filteredLowStock = selectVisibleItems(items, "dish", true).map(
     (item) => item.name
   );
-  assert.deepEqual(filteredRestock, ["Dish Soap"]);
+  assert.deepEqual(filteredLowStock, ["Dish Soap"]);
 });

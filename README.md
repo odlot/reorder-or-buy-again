@@ -72,7 +72,7 @@ In GitHub Actions CI, Playwright debug artifacts (`playwright-report/`, `test-re
 #### v0.1.0 - 2026-02-18
 
 - Mobile-first inventory management with fast quantity controls.
-- Restock-focused view and low-stock indicators.
+- Shopping-focused low-stock workflow with purchased checklist.
 - Local persistence via `localStorage`.
 - Offline file sync mode with status chip, conflict handling, and clear link action.
 - CI pipeline with validate + Playwright e2e + GitHub Pages deployment.
@@ -137,7 +137,7 @@ Run this before each release on real devices:
   - Open app and confirm existing local state loads.
   - Quick-add item defaults to quantity `1`.
   - `+`, `-`, inline quantity edit, and delete + undo all work.
-  - Restock tab shows only low-stock items.
+  - Shopping tab shows only low-stock items.
   - Settings sync status chip updates and `Sync Now`/`Clear Sync Link` behave correctly.
 - Android Chrome:
   - Repeat all checks above.
@@ -164,9 +164,9 @@ Milestones A, B, and C are implemented:
 - Fast quantity controls (`-`, `+`, inline quantity edit)
 - Quick add from main view (no Settings navigation required)
 - Remove items directly from main list (with undo)
-- Bottom navigation (`All`, `Restock`, `Settings`) with low-stock badge
-- Dedicated Restock view (low-stock items only)
-- Restock quick actions (single-item and bulk `Restock shown`)
+- Bottom navigation (`All`, `Shopping`, `Settings`) with low-stock badge
+- Dedicated Shopping view (low-stock items only)
+- Shopping checklist actions (`Apply purchased`)
 - Settings: default threshold, backup import/export, reset local data
 - Import/export JSON backups
 - Local persistence via `localStorage`

@@ -154,8 +154,10 @@ body {
 .quick-add-form input:focus-visible,
 .qty-input:focus-visible,
 .shopping-checkbox:focus-visible,
-.restock-button:focus-visible,
+.item-edit-name-input:focus-visible,
+.item-edit-threshold-input:focus-visible,
 .step-button:focus-visible,
+.edit-button:focus-visible,
 .remove-button:focus-visible,
 .settings-view input:focus-visible,
 .settings-view select:focus-visible,
@@ -171,15 +173,6 @@ body {
   margin: 0.65rem 0 0;
   color: var(--muted);
   font-size: 0.92rem;
-}
-
-.restock-all-button {
-  margin-top: 0.45rem;
-  width: 100%;
-  min-height: 2.55rem;
-  border-color: #c5d7c7;
-  background: #eff8ef;
-  color: #2f6c48;
 }
 
 .item-list {
@@ -229,27 +222,15 @@ body {
   font-weight: 600;
 }
 
-.restock-button {
-  margin-top: 0.42rem;
-  min-height: var(--tap-target);
-  border: 1px solid #c5d7c7;
-  border-radius: 0.7rem;
-  background: #eff8ef;
-  color: #2f6c48;
-  font-size: 0.82rem;
-  font-weight: 700;
-  padding: 0 0.65rem;
-  cursor: pointer;
-}
-
 .controls {
   display: inline-grid;
-  grid-template-columns: 2.75rem 3.1rem 2.75rem 2.75rem;
+  grid-template-columns: 2.75rem 3.1rem 2.75rem 3.1rem 2.75rem;
   gap: 0.35rem;
   align-items: center;
 }
 
 .step-button,
+.edit-button,
 .remove-button {
   border: 1px solid var(--line);
   border-radius: 0.75rem;
@@ -266,6 +247,12 @@ body {
 
 .step-button[data-step="-1"] {
   color: var(--danger);
+}
+
+.edit-button {
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .remove-button {
@@ -293,6 +280,29 @@ body {
   color: var(--muted);
   text-align: center;
   font-size: 0.94rem;
+}
+
+.item-edit-form {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.item-edit-name-input,
+.item-edit-threshold-input {
+  width: 100%;
+  min-height: 2.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--panel);
+  color: var(--text);
+  padding: 0 0.7rem;
+  font-size: 0.92rem;
+}
+
+.item-edit-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
 }
 
 .shopping-view {
@@ -538,7 +548,7 @@ body {
   border-radius: 1rem;
   background: var(--panel);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.35rem;
   padding: 0.35rem;
   backdrop-filter: blur(6px);
@@ -585,8 +595,8 @@ body {
 
 .action-button,
 .step-button,
+.edit-button,
 .remove-button,
-.restock-button,
 .undo-button,
 .nav-tab {
   min-width: var(--tap-target);
@@ -628,9 +638,7 @@ body {
   color: #ffb3aa;
 }
 
-:root[data-theme="dark"] .primary-button,
-:root[data-theme="dark"] .restock-button,
-:root[data-theme="dark"] .restock-all-button {
+:root[data-theme="dark"] .primary-button {
   border-color: #4e6f58;
   background: #203126;
   color: #b7e8c7;
@@ -697,7 +705,7 @@ body {
 
   .controls {
     width: 100%;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 

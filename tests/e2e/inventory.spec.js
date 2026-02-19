@@ -42,19 +42,16 @@ test("action controls expose labels and finger-sized tap targets", async ({
     name: "Add item to inventory",
   });
   const allTab = page.getByRole("button", { name: "Open all items view" });
-  const restockTab = page.getByRole("button", { name: "Open restock view" });
   const shoppingTab = page.getByRole("button", { name: "Open shopping view" });
   const settingsTab = page.getByRole("button", { name: "Open settings view" });
 
   await expect(addItemButton).toBeVisible();
   await expect(allTab).toBeVisible();
-  await expect(restockTab).toBeVisible();
   await expect(shoppingTab).toBeVisible();
   await expect(settingsTab).toBeVisible();
 
   await expectTapTarget(addItemButton);
   await expectTapTarget(allTab);
-  await expectTapTarget(restockTab);
   await expectTapTarget(shoppingTab);
   await expectTapTarget(settingsTab);
 
@@ -65,25 +62,17 @@ test("action controls expose labels and finger-sized tap targets", async ({
     name: "Increase Dish Soap",
   });
   const removeDishSoap = page.getByRole("button", { name: "Remove Dish Soap" });
+  const editDishSoap = page.getByRole("button", { name: "Edit Dish Soap" });
 
   await expect(decreaseDishSoap).toBeVisible();
   await expect(increaseDishSoap).toBeVisible();
   await expect(removeDishSoap).toBeVisible();
+  await expect(editDishSoap).toBeVisible();
 
   await expectTapTarget(decreaseDishSoap);
   await expectTapTarget(increaseDishSoap);
   await expectTapTarget(removeDishSoap);
-
-  await restockTab.click();
-  const restockDishSoap = page.getByRole("button", { name: "Restock Dish Soap" });
-  const restockShown = page.getByRole("button", {
-    name: "Restock all shown low-stock items",
-  });
-
-  await expect(restockDishSoap).toBeVisible();
-  await expect(restockShown).toBeVisible();
-  await expectTapTarget(restockDishSoap);
-  await expectTapTarget(restockShown);
+  await expectTapTarget(editDishSoap);
 });
 
 test("plus/minus controls update quantity", async ({ page }) => {
@@ -133,43 +122,22 @@ test("delete removes an item and undo restores it", async ({ page }) => {
   await expect(page.locator("#undo-button")).toBeHidden();
 });
 
-test("restock view only shows low-stock items", async ({ page }) => {
-  await page.locator('.nav-tab[data-view="restock"]').click();
+test("in-place edit updates description and low threshold", async ({ page }) => {
+  const soapRow = itemRow(page, "Dish Soap");
+  await soapRow.getByRole("button", { name: "Edit Dish Soap" }).click();
 
-  await expect(itemRow(page, "Dish Soap")).toHaveCount(1);
-  await expect(itemRow(page, "Laundry Detergent")).toHaveCount(1);
-  await expect(itemRow(page, "Paper Towels")).toHaveCount(1);
-  await expect(itemRow(page, "Toothpaste")).toHaveCount(0);
-  await expect(itemRow(page, "Trash Bags")).toHaveCount(0);
-});
+  const editForm = page.locator('.item-edit-form[aria-label="Edit Dish Soap"]');
+  await editForm.getByLabel("Description for Dish Soap").fill("Dish Soap Refill");
+  await editForm.getByLabel("Low threshold for Dish Soap").fill("3");
+  await editForm.getByRole("button", { name: "Save edits for Dish Soap" }).click();
 
-test("restock quick action updates item and removes it from restock list", async ({
-  page,
-}) => {
-  await page.locator('.nav-tab[data-view="restock"]').click();
-  await expect(itemRow(page, "Dish Soap")).toHaveCount(1);
-
-  await itemRow(page, "Dish Soap").locator('[data-action="restock"]').click();
-
-  await expect(itemRow(page, "Dish Soap")).toHaveCount(0);
-  await expect(page.locator("#undo-toast")).toBeVisible();
-  await expect(page.locator("#undo-message")).toContainText("Restocked Dish Soap");
-  await expect(page.locator("#undo-button")).toBeHidden();
-});
-
-test("restock shown bulk action clears current restock list", async ({ page }) => {
-  await page.locator('.nav-tab[data-view="restock"]').click();
-  await expect(page.locator("#restock-all-button")).toBeVisible();
-
-  await page.click("#restock-all-button");
-
-  await expect(page.locator("#summary-line")).toContainText("0 shown");
-  await expect(page.locator("#empty-state")).toContainText(
-    "No low-stock items right now."
+  await expect(itemRow(page, "Dish Soap Refill")).toHaveCount(1);
+  await expect(itemRow(page, "Dish Soap Refill").locator(".item-meta")).toContainText(
+    "Threshold: 3"
   );
-  await expect(page.locator("#undo-toast")).toBeVisible();
-  await expect(page.locator("#undo-message")).toContainText("Restocked");
-  await expect(page.locator("#undo-button")).toBeHidden();
+  await expect(page.locator("#undo-message")).toContainText(
+    "Updated description and threshold."
+  );
 });
 
 test("shopping view can mark purchased items and apply them to inventory", async ({

@@ -12,12 +12,13 @@ export function bindAppEvents({
   resetLocalData,
   linkSyncFile,
   syncWithLinkedFile,
-  restockVisibleLowItems,
   clearSyncLink,
   decodeItemId,
   setQuantity,
-  restockItemById,
   deleteItemById,
+  startEditingItemById,
+  cancelEditingItem,
+  saveItemEdits,
   togglePurchasedByItemId,
   applyPurchasedItems,
   commitQuantityFromInput,
@@ -36,7 +37,6 @@ export function bindAppEvents({
     resetDataButton,
     linkSyncButton,
     syncNowButton,
-    restockAllButton,
     clearSyncLinkButton,
     navTabs,
     itemList,
@@ -95,10 +95,6 @@ export function bindAppEvents({
     void syncWithLinkedFile();
   });
 
-  restockAllButton.addEventListener("click", () => {
-    restockVisibleLowItems();
-  });
-
   applyPurchasedButton.addEventListener("click", () => {
     applyPurchasedItems();
   });
@@ -115,6 +111,9 @@ export function bindAppEvents({
       }
 
       state.activeView = view;
+      if (view !== "all") {
+        state.editingItemId = "";
+      }
       render();
     });
   });
@@ -152,14 +151,43 @@ export function bindAppEvents({
       return;
     }
 
-    if (action === "restock") {
-      restockItemById(itemId);
+    if (action === "delete") {
+      deleteItemById(itemId);
       return;
     }
 
-    if (action === "delete") {
-      deleteItemById(itemId);
+    if (action === "edit") {
+      startEditingItemById(itemId);
+      return;
     }
+
+    if (action === "cancel-edit") {
+      cancelEditingItem();
+    }
+  });
+
+  itemList.addEventListener("submit", (event) => {
+    const form = event.target.closest(".item-edit-form");
+    if (!form) {
+      return;
+    }
+
+    event.preventDefault();
+    const row = form.closest("[data-item-id]");
+    if (!row) {
+      return;
+    }
+
+    const itemId = decodeItemId(row.dataset.itemId);
+    if (!itemId) {
+      return;
+    }
+
+    const formData = new FormData(form);
+    saveItemEdits(itemId, {
+      name: formData.get("name"),
+      lowThreshold: formData.get("lowThreshold"),
+    });
   });
 
   itemList.addEventListener("focusout", (event) => {
@@ -183,6 +211,12 @@ export function bindAppEvents({
   });
 
   itemList.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && event.target.closest(".item-edit-form")) {
+      event.preventDefault();
+      cancelEditingItem();
+      return;
+    }
+
     const input = event.target.closest(".qty-input");
     if (!input) {
       return;

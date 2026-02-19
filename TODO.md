@@ -24,7 +24,7 @@
 
 - [x] Build main list showing all items and current quantity.
 - [x] Add quick search/filter by name.
-- [x] Sort by "needs restock first" then alphabetical.
+- [x] Sort by "needs purchase first" then alphabetical.
 
 ### 3. Fast Quantity Controls
 
@@ -32,16 +32,16 @@
 - [x] Support direct quantity edit (tap value).
 - [x] Add ultra-fast actions (e.g., decrement by 1, increment by 1).
 
-### 4. Low-Stock Logic + Restock View
+### 4. Low-Stock Logic + Shopping View
 
 - [x] Mark item as low when `quantity <= lowThreshold`.
-- [x] Create dedicated "Restock" view with only low items.
+- [x] Create dedicated "Shopping" view with only low items.
 - [x] Show low-stock count badge in navigation.
-- [x] Add one-tap restock actions (single item + bulk restock shown).
+- [x] Add purchased checklist + apply flow for low-stock items.
 
 ### 5. Multi-View Navigation
 
-- [x] Add bottom nav tabs: `All`, `Restock`, `Settings`.
+- [x] Add bottom nav tabs: `All`, `Shopping`, `Settings`.
 - [x] Preserve filters/state when switching tabs.
 - [x] Ensure smooth switching with no full page reload.
 
@@ -68,7 +68,7 @@
 ### 9. Testing
 
 - [x] Unit tests for low-stock calculation and sorting.
-- [x] Playwright e2e tests for add/edit/delete/restock interactions.
+- [x] Playwright e2e tests for add/edit/delete/shopping interactions.
 - [x] Test multi-view behavior and persisted state.
 
 ### 10. Offline Cross-Device Sync (No Backend)
@@ -87,7 +87,7 @@
 ## Suggested Implementation Order
 
 - [x] Milestone A: Foundation + All Items + Fast Quantity Controls.
-- [x] Milestone B: Low-stock logic + Restock view + nav badge.
+- [x] Milestone B: Low-stock logic + Shopping view + nav badge.
 - [x] Milestone C: Settings + persistence hardening + tests.
 - [x] Milestone D: Offline file sync polish + sync conflict tests.
 
@@ -95,5 +95,5 @@
 
 - [x] User can add household items.
 - [x] User can quickly adjust quantities from the main list.
-- [x] User can open a dedicated Restock view to see low items only.
+- [x] User can open a dedicated Shopping view to see low items only.
 - [x] Data persists across page reloads on mobile.
