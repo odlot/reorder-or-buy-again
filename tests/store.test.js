@@ -36,8 +36,9 @@ test("createDefaultState returns starter items and default settings", () => {
   assert.ok(state.items.length > 0);
   assert.equal(state.settings.defaultLowThreshold, 1);
   assert.equal(state.settings.themeMode, "light");
-  assert.deepEqual(state.shopping, { purchasedByItemId: {} });
+  assert.deepEqual(state.shopping, { buyQuantityByItemId: {} });
   assert.equal(state.revision, 0);
+  assert.ok(state.items.every((item) => item.targetQuantity >= item.lowThreshold + 1));
 });
 
 test("loadState falls back to defaults for invalid stored payloads", () => {
@@ -49,16 +50,24 @@ test("loadState falls back to defaults for invalid stored payloads", () => {
   assert.ok(state.items.length > 0);
   assert.equal(state.settings.defaultLowThreshold, 1);
   assert.equal(state.settings.themeMode, "light");
-  assert.deepEqual(state.shopping, { purchasedByItemId: {} });
+  assert.deepEqual(state.shopping, { buyQuantityByItemId: {} });
   assert.equal(state.revision, 0);
 });
 
 test("saveState writes current schema and round-trips through loadState", () => {
   const storage = createMemoryStorage();
   const state = {
-    items: [{ id: "a", name: "Trash Bags", quantity: 4, lowThreshold: 2 }],
+    items: [
+      {
+        id: "a",
+        name: "Trash Bags",
+        quantity: 4,
+        lowThreshold: 2,
+        targetQuantity: 7,
+      },
+    ],
     settings: { defaultLowThreshold: 3, themeMode: "dark" },
-    shopping: { purchasedByItemId: { a: true } },
+    shopping: { buyQuantityByItemId: { a: 3 } },
   };
 
   saveState(state, storage);
@@ -68,7 +77,8 @@ test("saveState writes current schema and round-trips through loadState", () => 
   assert.equal(reloaded.items[0].name, "Trash Bags");
   assert.equal(reloaded.settings.defaultLowThreshold, 3);
   assert.equal(reloaded.settings.themeMode, "dark");
-  assert.deepEqual(reloaded.shopping, { purchasedByItemId: { a: true } });
+  assert.equal(reloaded.items[0].targetQuantity, 7);
+  assert.deepEqual(reloaded.shopping, { buyQuantityByItemId: { a: 3 } });
   assert.equal(reloaded.revision, 1);
   assert.ok(storage.getItem(STORAGE_KEY));
 });
@@ -106,6 +116,7 @@ test("upsertItem uses default threshold when omitted", () => {
 
   assert.equal(updated.length, 1);
   assert.equal(updated[0].lowThreshold, 5);
+  assert.equal(updated[0].targetQuantity, 6);
 });
 
 test("removeItem deletes matching id", () => {
@@ -134,9 +145,17 @@ test("updateItemQuantity changes values and clamps at zero", () => {
 
 test("serializeState and deserializeState round-trip valid backups", () => {
   const state = normalizeState({
-    items: [{ id: "x", name: "Toothpaste", quantity: 2, lowThreshold: 1 }],
+    items: [
+      {
+        id: "x",
+        name: "Toothpaste",
+        quantity: 2,
+        lowThreshold: 1,
+        targetQuantity: 4,
+      },
+    ],
     settings: { defaultLowThreshold: 2, themeMode: "dark" },
-    shopping: { purchasedByItemId: { x: true } },
+    shopping: { buyQuantityByItemId: { x: 2 } },
   });
 
   const text = serializeState(state);
@@ -146,7 +165,8 @@ test("serializeState and deserializeState round-trip valid backups", () => {
   assert.equal(parsed.items[0].name, "Toothpaste");
   assert.equal(parsed.settings.defaultLowThreshold, 2);
   assert.equal(parsed.settings.themeMode, "dark");
-  assert.deepEqual(parsed.shopping, { purchasedByItemId: { x: true } });
+  assert.equal(parsed.items[0].targetQuantity, 4);
+  assert.deepEqual(parsed.shopping, { buyQuantityByItemId: { x: 2 } });
 });
 
 test("normalizeState falls back to light theme for invalid theme values", () => {
@@ -158,21 +178,46 @@ test("normalizeState falls back to light theme for invalid theme values", () => 
   assert.equal(state.settings.themeMode, "light");
 });
 
-test("normalizeState keeps purchased flags only for truthy values", () => {
+test("normalizeState keeps only positive buy quantities", () => {
   const state = normalizeState({
-    items: [{ id: "soap", name: "Soap", quantity: 1, lowThreshold: 1 }],
+    items: [
+      {
+        id: "soap",
+        name: "Soap",
+        quantity: 1,
+        lowThreshold: 1,
+        targetQuantity: 3,
+      },
+    ],
     shopping: {
-      purchasedByItemId: {
-        soap: true,
-        towels: false,
-        "": true,
+      buyQuantityByItemId: {
+        soap: 2,
+        towels: 0,
+        "": 3,
       },
     },
   });
 
   assert.deepEqual(state.shopping, {
-    purchasedByItemId: {
-      soap: true,
+    buyQuantityByItemId: {
+      soap: 2,
+    },
+  });
+});
+
+test("normalizeState migrates legacy purchased flags to buy quantity map", () => {
+  const state = normalizeState({
+    items: [{ id: "soap", name: "Soap", quantity: 1, lowThreshold: 1 }],
+    shopping: {
+      purchasedByItemId: {
+        soap: true,
+      },
+    },
+  });
+
+  assert.deepEqual(state.shopping, {
+    buyQuantityByItemId: {
+      soap: 1,
     },
   });
 });

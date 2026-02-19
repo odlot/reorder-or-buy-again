@@ -12,6 +12,14 @@ function itemRow(page, name) {
   });
 }
 
+function shoppingRow(page, name) {
+  return page.locator(".shopping-row").filter({
+    has: page.locator(".shopping-name", {
+      hasText: new RegExp(`^${escapeRegExp(name)}$`),
+    }),
+  });
+}
+
 async function expectTapTarget(locator, minSize = 44) {
   const box = await locator.boundingBox();
   expect(box).not.toBeNull();
@@ -73,6 +81,23 @@ test("action controls expose labels and finger-sized tap targets", async ({
   await expectTapTarget(increaseDishSoap);
   await expectTapTarget(removeDishSoap);
   await expectTapTarget(editDishSoap);
+
+  await shoppingTab.click();
+  const shoppingStepDown = page.getByRole("button", {
+    name: "Decrease planned quantity for Dish Soap",
+  });
+  const shoppingStepUp = page.getByRole("button", {
+    name: "Increase planned quantity for Dish Soap",
+  });
+  const shoppingMax = page.getByRole("button", {
+    name: "Set planned quantity for Dish Soap to needed amount",
+  });
+  await expect(shoppingStepDown).toBeVisible();
+  await expect(shoppingStepUp).toBeVisible();
+  await expect(shoppingMax).toBeVisible();
+  await expectTapTarget(shoppingStepDown);
+  await expectTapTarget(shoppingStepUp);
+  await expectTapTarget(shoppingMax);
 });
 
 test("plus/minus controls update quantity", async ({ page }) => {
@@ -122,48 +147,56 @@ test("delete removes an item and undo restores it", async ({ page }) => {
   await expect(page.locator("#undo-button")).toBeHidden();
 });
 
-test("in-place edit updates description and low threshold", async ({ page }) => {
+test("in-place edit updates description, low threshold, and target", async ({
+  page,
+}) => {
   const soapRow = itemRow(page, "Dish Soap");
   await soapRow.getByRole("button", { name: "Edit Dish Soap" }).click();
 
   const editForm = page.locator('.item-edit-form[aria-label="Edit Dish Soap"]');
   await editForm.getByLabel("Description for Dish Soap").fill("Dish Soap Refill");
   await editForm.getByLabel("Low threshold for Dish Soap").fill("3");
+  await editForm.getByLabel("Target quantity for Dish Soap").fill("6");
   await editForm.getByRole("button", { name: "Save edits for Dish Soap" }).click();
 
   await expect(itemRow(page, "Dish Soap Refill")).toHaveCount(1);
   await expect(itemRow(page, "Dish Soap Refill").locator(".item-meta")).toContainText(
     "Threshold: 3"
   );
+  await expect(itemRow(page, "Dish Soap Refill").locator(".item-meta")).toContainText(
+    "Target: 6"
+  );
   await expect(page.locator("#undo-message")).toContainText(
-    "Updated description and threshold."
+    "Updated description and threshold and target."
   );
 });
 
-test("shopping view can mark purchased items and apply them to inventory", async ({
+test("shopping view can plan quantities and apply purchases to inventory", async ({
   page,
 }) => {
   await page.locator('.nav-tab[data-view="shopping"]').click();
 
-  const dishSoapCheckbox = page.getByRole("checkbox", {
-    name: "Mark Dish Soap as purchased",
-  });
-  await expect(dishSoapCheckbox).toBeVisible();
-  await dishSoapCheckbox.check();
+  const dishSoapShoppingRow = shoppingRow(page, "Dish Soap");
+  await expect(dishSoapShoppingRow).toHaveCount(1);
+
+  const plannedQuantityInput = dishSoapShoppingRow.locator(".shopping-buy-input");
+  await expect(plannedQuantityInput).toHaveValue("0");
+  await dishSoapShoppingRow
+    .locator('[data-action="shopping-step"][data-step="1"]')
+    .click();
+  await expect(plannedQuantityInput).toHaveValue("1");
 
   await expect(page.locator("#apply-purchased-button")).toBeEnabled();
   await page.click("#apply-purchased-button");
 
   await expect(page.locator("#undo-toast")).toBeVisible();
   await expect(page.locator("#undo-message")).toContainText(
-    "Applied purchases for 1 item."
+    "Applied 1 unit across 1 item."
   );
 
   await page.locator('.nav-tab[data-view="all"]').click();
   await expect(itemRow(page, "Dish Soap").locator(".qty-input")).toHaveValue("2");
 
   await page.locator('.nav-tab[data-view="shopping"]').click();
-  await expect(
-    page.getByRole("checkbox", { name: "Mark Dish Soap as purchased" })
-  ).toHaveCount(0);
+  await expect(shoppingRow(page, "Dish Soap")).toHaveCount(0);
 });

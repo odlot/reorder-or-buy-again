@@ -19,7 +19,9 @@ export function bindAppEvents({
   startEditingItemById,
   cancelEditingItem,
   saveItemEdits,
-  togglePurchasedByItemId,
+  setShoppingBuyQuantity,
+  stepShoppingBuyQuantity,
+  commitShoppingBuyFromInput,
   applyPurchasedItems,
   commitQuantityFromInput,
   undoDelete,
@@ -187,6 +189,7 @@ export function bindAppEvents({
     saveItemEdits(itemId, {
       name: formData.get("name"),
       lowThreshold: formData.get("lowThreshold"),
+      targetQuantity: formData.get("targetQuantity"),
     });
   });
 
@@ -247,13 +250,13 @@ export function bindAppEvents({
     input.dataset.previousValue = input.value;
   });
 
-  shoppingList.addEventListener("change", (event) => {
-    const checkbox = event.target.closest('[data-action="toggle-purchased"]');
-    if (!checkbox) {
+  shoppingList.addEventListener("click", (event) => {
+    const actionTarget = event.target.closest("[data-action]");
+    if (!actionTarget) {
       return;
     }
 
-    const row = checkbox.closest("[data-item-id]");
+    const row = actionTarget.closest("[data-item-id]");
     if (!row) {
       return;
     }
@@ -263,7 +266,70 @@ export function bindAppEvents({
       return;
     }
 
-    togglePurchasedByItemId(itemId, checkbox.checked);
+    const action = actionTarget.dataset.action;
+    if (action === "shopping-step") {
+      const step = Number.parseInt(actionTarget.dataset.step, 10);
+      if (Number.isNaN(step)) {
+        return;
+      }
+      stepShoppingBuyQuantity(itemId, step);
+      return;
+    }
+
+    if (action === "shopping-max") {
+      setShoppingBuyQuantity(itemId, Number.MAX_SAFE_INTEGER);
+    }
+  });
+
+  shoppingList.addEventListener("focusout", (event) => {
+    const input = event.target.closest(".shopping-buy-input");
+    if (!input) {
+      return;
+    }
+
+    const row = input.closest("[data-item-id]");
+    if (!row) {
+      return;
+    }
+
+    const itemId = decodeItemId(row.dataset.itemId);
+    if (!itemId) {
+      return;
+    }
+
+    commitShoppingBuyFromInput(input, itemId);
+    delete input.dataset.previousValue;
+  });
+
+  shoppingList.addEventListener("keydown", (event) => {
+    const input = event.target.closest(".shopping-buy-input");
+    if (!input) {
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      input.blur();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      const previous = input.dataset.previousValue;
+      if (previous) {
+        input.value = previous;
+      }
+      input.blur();
+    }
+  });
+
+  shoppingList.addEventListener("focusin", (event) => {
+    const input = event.target.closest(".shopping-buy-input");
+    if (!input) {
+      return;
+    }
+
+    input.dataset.previousValue = input.value;
   });
 
   undoButton.addEventListener("click", () => {

@@ -37,7 +37,7 @@
 - [x] Mark item as low when `quantity <= lowThreshold`.
 - [x] Create dedicated "Shopping" view with only low items.
 - [x] Show low-stock count badge in navigation.
-- [x] Add purchased checklist + apply flow for low-stock items.
+- [x] Add adjustable planned-buy quantities + apply flow for low-stock items.
 
 ### 5. Multi-View Navigation
 
@@ -50,7 +50,8 @@
 - [x] Manage low-stock threshold defaults.
 - [x] Add item creation/edit/delete flow in primary inventory view.
 - [x] Add reset/clear local data action with confirmation.
-- [ ] Allow customizing the `lowThreshold` for each item individually.
+- [x] Allow customizing the `lowThreshold` for each item individually.
+- [x] Allow customizing per-item `targetQuantity` for shopping plans.
 
 ### 7. Persistence + Reliability
 
