@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+const STORAGE_KEY = "reorder-or-buy-again.state";
+
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -71,16 +73,21 @@ test("action controls expose labels and finger-sized tap targets", async ({
   });
   const removeDishSoap = page.getByRole("button", { name: "Remove Dish Soap" });
   const editDishSoap = page.getByRole("button", { name: "Edit Dish Soap" });
+  const confirmDishSoap = page.getByRole("button", {
+    name: "Confirm quantity for Dish Soap",
+  });
 
   await expect(decreaseDishSoap).toBeVisible();
   await expect(increaseDishSoap).toBeVisible();
   await expect(removeDishSoap).toBeVisible();
   await expect(editDishSoap).toBeVisible();
+  await expect(confirmDishSoap).toBeVisible();
 
   await expectTapTarget(decreaseDishSoap);
   await expectTapTarget(increaseDishSoap);
   await expectTapTarget(removeDishSoap);
   await expectTapTarget(editDishSoap);
+  await expectTapTarget(confirmDishSoap);
 
   await shoppingTab.click();
   const shoppingStepDown = page.getByRole("button", {
@@ -136,6 +143,73 @@ test("settings can add and remove source and room presets", async ({ page }) => 
     )
     .click();
   await expect(page.locator("#room-preset-list")).not.toContainText("Guest Room");
+});
+
+test("overdue reminder appears and confirm quantity clears it", async ({ page }) => {
+  await page.evaluate((storageKey) => {
+    const now = Date.now();
+    const staleTimestamp = new Date(now - 40 * 24 * 60 * 60 * 1000).toISOString();
+    const freshTimestamp = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        items: [
+          {
+            id: "dish-soap",
+            name: "Dish Soap",
+            quantity: 1,
+            lowThreshold: 1,
+            targetQuantity: 2,
+            sourceCategories: ["Grocery"],
+            room: "Kitchen",
+            checkIntervalDays: 14,
+            lastCheckedAt: staleTimestamp,
+            updatedAt: staleTimestamp,
+          },
+          {
+            id: "toothpaste",
+            name: "Toothpaste",
+            quantity: 2,
+            lowThreshold: 1,
+            targetQuantity: 3,
+            sourceCategories: ["Pharmacy"],
+            room: "Bathroom",
+            checkIntervalDays: 14,
+            lastCheckedAt: freshTimestamp,
+            updatedAt: freshTimestamp,
+          },
+        ],
+        settings: {
+          defaultLowThreshold: 1,
+          themeMode: "light",
+          defaultCheckIntervalDays: 14,
+          sourceCategoryPresets: ["Grocery", "Pharmacy"],
+          roomPresets: ["Kitchen", "Bathroom"],
+        },
+        shopping: {
+          buyQuantityByItemId: {},
+        },
+        updatedAt: new Date(now).toISOString(),
+        revision: 1,
+      })
+    );
+  }, STORAGE_KEY);
+
+  await page.reload();
+
+  await expect(page.locator("#check-reminder-chip")).toBeVisible();
+  await expect(page.locator("#check-reminder-text")).toContainText(
+    "Dish Soap"
+  );
+
+  await page
+    .getByRole("button", { name: "Confirm quantity for Dish Soap" })
+    .click();
+  await expect(page.locator("#undo-message")).toContainText(
+    "Confirmed Dish Soap quantity."
+  );
+  await expect(page.locator("#check-reminder-panel")).toBeHidden();
 });
 
 test("plus/minus controls update quantity", async ({ page }) => {

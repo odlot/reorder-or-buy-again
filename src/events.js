@@ -19,6 +19,7 @@ export function bindAppEvents({
   clearSyncLink,
   decodeItemId,
   setQuantity,
+  confirmItemCheck,
   deleteItemById,
   startEditingItemById,
   cancelEditingItem,
@@ -217,6 +218,11 @@ export function bindAppEvents({
       }
 
       setQuantity(itemId, item.quantity + step);
+      return;
+    }
+
+    if (action === "confirm-check") {
+      confirmItemCheck(itemId);
       return;
     }
 
