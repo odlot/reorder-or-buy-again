@@ -459,6 +459,55 @@ body {
   gap: 0.6rem;
 }
 
+.preset-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.preset-chip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  padding: 0.25rem 0.35rem 0.25rem 0.65rem;
+}
+
+.preset-chip-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.preset-chip-remove {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  min-width: 1.8rem;
+  min-height: 1.8rem;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.preset-chip-static {
+  border-style: dashed;
+}
+
 .settings-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

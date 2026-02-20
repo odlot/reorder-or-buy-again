@@ -1,11 +1,34 @@
 import { clampQuantity } from "./logic.js";
 
 export const STORAGE_KEY = "reorder-or-buy-again.state";
+export const UNASSIGNED_PRESET = "Unassigned";
+export const DEFAULT_SOURCE_CATEGORY_PRESETS = Object.freeze([
+  "Grocery",
+  "Pharmacy",
+  "Mall",
+  "Online",
+  "Bulk Store",
+  "Hardware",
+  "Specialty",
+]);
+export const DEFAULT_ROOM_PRESETS = Object.freeze([
+  "Kitchen",
+  "Bathroom",
+  "Laundry",
+  "Pantry",
+  "Garage",
+  "Office",
+  "Storage",
+]);
 export const DEFAULT_SETTINGS = Object.freeze({
   defaultLowThreshold: 1,
   themeMode: "light",
+  defaultCheckIntervalDays: 14,
+  sourceCategoryPresets: DEFAULT_SOURCE_CATEGORY_PRESETS,
+  roomPresets: DEFAULT_ROOM_PRESETS,
 });
 const DEFAULT_REVISION = 0;
+const STARTER_TIMESTAMP = new Date().toISOString();
 
 const STARTER_ITEMS = [
   {
@@ -14,8 +37,11 @@ const STARTER_ITEMS = [
     quantity: 1,
     lowThreshold: 1,
     targetQuantity: 2,
-    category: "Kitchen",
-    updatedAt: new Date().toISOString(),
+    sourceCategories: ["Grocery"],
+    room: "Kitchen",
+    checkIntervalDays: DEFAULT_SETTINGS.defaultCheckIntervalDays,
+    lastCheckedAt: STARTER_TIMESTAMP,
+    updatedAt: STARTER_TIMESTAMP,
   },
   {
     id: "toothpaste",
@@ -23,8 +49,11 @@ const STARTER_ITEMS = [
     quantity: 2,
     lowThreshold: 1,
     targetQuantity: 3,
-    category: "Bathroom",
-    updatedAt: new Date().toISOString(),
+    sourceCategories: ["Pharmacy"],
+    room: "Bathroom",
+    checkIntervalDays: DEFAULT_SETTINGS.defaultCheckIntervalDays,
+    lastCheckedAt: STARTER_TIMESTAMP,
+    updatedAt: STARTER_TIMESTAMP,
   },
   {
     id: "trash-bags",
@@ -32,8 +61,11 @@ const STARTER_ITEMS = [
     quantity: 6,
     lowThreshold: 3,
     targetQuantity: 7,
-    category: "Kitchen",
-    updatedAt: new Date().toISOString(),
+    sourceCategories: ["Grocery"],
+    room: "Kitchen",
+    checkIntervalDays: DEFAULT_SETTINGS.defaultCheckIntervalDays,
+    lastCheckedAt: STARTER_TIMESTAMP,
+    updatedAt: STARTER_TIMESTAMP,
   },
   {
     id: "paper-towels",
@@ -41,8 +73,11 @@ const STARTER_ITEMS = [
     quantity: 2,
     lowThreshold: 2,
     targetQuantity: 3,
-    category: "Kitchen",
-    updatedAt: new Date().toISOString(),
+    sourceCategories: ["Grocery"],
+    room: "Kitchen",
+    checkIntervalDays: DEFAULT_SETTINGS.defaultCheckIntervalDays,
+    lastCheckedAt: STARTER_TIMESTAMP,
+    updatedAt: STARTER_TIMESTAMP,
   },
   {
     id: "laundry-detergent",
@@ -50,8 +85,11 @@ const STARTER_ITEMS = [
     quantity: 1,
     lowThreshold: 1,
     targetQuantity: 2,
-    category: "Laundry",
-    updatedAt: new Date().toISOString(),
+    sourceCategories: ["Grocery"],
+    room: "Laundry",
+    checkIntervalDays: DEFAULT_SETTINGS.defaultCheckIntervalDays,
+    lastCheckedAt: STARTER_TIMESTAMP,
+    updatedAt: STARTER_TIMESTAMP,
   },
 ];
 
@@ -67,13 +105,19 @@ function createId() {
 }
 
 function cloneStarterItems() {
-  return STARTER_ITEMS.map((item) => ({ ...item }));
+  return STARTER_ITEMS.map((item) => ({
+    ...item,
+    sourceCategories: [...item.sourceCategories],
+  }));
 }
 
 function createDefaultSettings() {
   return {
     defaultLowThreshold: DEFAULT_SETTINGS.defaultLowThreshold,
     themeMode: DEFAULT_SETTINGS.themeMode,
+    defaultCheckIntervalDays: DEFAULT_SETTINGS.defaultCheckIntervalDays,
+    sourceCategoryPresets: [...DEFAULT_SETTINGS.sourceCategoryPresets],
+    roomPresets: [...DEFAULT_SETTINGS.roomPresets],
   };
 }
 
@@ -103,15 +147,100 @@ function normalizeRevision(revision, fallback = DEFAULT_REVISION) {
   return parsed;
 }
 
+function normalizePresetLabel(value) {
+  return String(value || "").trim();
+}
+
+function normalizePresetList(presets, fallbackPresets) {
+  const source = Array.isArray(presets) ? presets : fallbackPresets;
+  const seen = new Set();
+  const normalized = [];
+
+  for (const preset of source) {
+    const label = normalizePresetLabel(preset);
+    if (!label) {
+      continue;
+    }
+    const key = label.toLocaleLowerCase();
+    if (seen.has(key) || key === UNASSIGNED_PRESET.toLocaleLowerCase()) {
+      continue;
+    }
+    seen.add(key);
+    normalized.push(label);
+  }
+
+  if (normalized.length > 0) {
+    return normalized;
+  }
+
+  return [...fallbackPresets];
+}
+
+function normalizeCheckIntervalDays(value, fallback) {
+  const interval = clampQuantity(value);
+  if (interval > 0) {
+    return interval;
+  }
+
+  return Math.max(1, clampQuantity(fallback));
+}
+
+function normalizeSourceCategories(sourceCategories) {
+  const source = Array.isArray(sourceCategories)
+    ? sourceCategories
+    : sourceCategories
+      ? [sourceCategories]
+      : [];
+  const seen = new Set();
+  const normalized = [];
+
+  for (const rawValue of source) {
+    const category = normalizePresetLabel(rawValue);
+    if (!category) {
+      continue;
+    }
+    const key = category.toLocaleLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    normalized.push(category);
+  }
+
+  if (normalized.length === 0) {
+    return [UNASSIGNED_PRESET];
+  }
+
+  const withoutUnassigned = normalized.filter(
+    (value) => value.toLocaleLowerCase() !== UNASSIGNED_PRESET.toLocaleLowerCase()
+  );
+
+  return withoutUnassigned.length > 0 ? withoutUnassigned : [UNASSIGNED_PRESET];
+}
+
+function normalizeRoom(room) {
+  return normalizePresetLabel(room) || UNASSIGNED_PRESET;
+}
+
 function normalizeSettings(settings) {
   const source = settings && typeof settings === "object" ? settings : {};
   const themeMode = source.themeMode === "dark" ? "dark" : "light";
+  const defaultCheckIntervalDays = normalizeCheckIntervalDays(
+    source.defaultCheckIntervalDays,
+    DEFAULT_SETTINGS.defaultCheckIntervalDays
+  );
 
   return {
     defaultLowThreshold: clampQuantity(
       source.defaultLowThreshold ?? DEFAULT_SETTINGS.defaultLowThreshold
     ),
     themeMode,
+    defaultCheckIntervalDays,
+    sourceCategoryPresets: normalizePresetList(
+      source.sourceCategoryPresets,
+      DEFAULT_SETTINGS.sourceCategoryPresets
+    ),
+    roomPresets: normalizePresetList(source.roomPresets, DEFAULT_SETTINGS.roomPresets),
   };
 }
 
@@ -174,6 +303,17 @@ export function normalizeItem(item, settings = DEFAULT_SETTINGS) {
     hasExplicitTarget ? clampQuantity(source.targetQuantity) : lowThreshold + 1,
     lowThreshold + 1
   );
+  const updatedAt = String(source.updatedAt || new Date().toISOString());
+  const fallbackLegacyRoom = normalizePresetLabel(source.category);
+  const sourceCategories = normalizeSourceCategories(
+    source.sourceCategories ?? source.sourceCategory
+  );
+  const room = normalizeRoom(source.room ?? fallbackLegacyRoom);
+  const checkIntervalDays = normalizeCheckIntervalDays(
+    source.checkIntervalDays,
+    settings.defaultCheckIntervalDays
+  );
+  const lastCheckedAt = String(source.lastCheckedAt || updatedAt);
 
   return {
     id: String(source.id || createId()),
@@ -181,8 +321,11 @@ export function normalizeItem(item, settings = DEFAULT_SETTINGS) {
     quantity: clampQuantity(source.quantity),
     lowThreshold,
     targetQuantity,
-    category: String(source.category || "").trim(),
-    updatedAt: String(source.updatedAt || new Date().toISOString()),
+    sourceCategories,
+    room,
+    checkIntervalDays,
+    lastCheckedAt,
+    updatedAt,
   };
 }
 
@@ -326,6 +469,83 @@ export function upsertItem(items, itemInput, settings = DEFAULT_SETTINGS) {
 
 export function removeItem(items, itemId) {
   return items.filter((item) => item.id !== itemId);
+}
+
+export function upsertPresetValue(presets, value) {
+  const source = Array.isArray(presets) ? presets : [];
+  const label = normalizePresetLabel(value);
+  if (!label || label.toLocaleLowerCase() === UNASSIGNED_PRESET.toLocaleLowerCase()) {
+    return [...source];
+  }
+
+  const hasExisting = source.some(
+    (preset) => preset.toLocaleLowerCase() === label.toLocaleLowerCase()
+  );
+  if (hasExisting) {
+    return [...source];
+  }
+
+  return [...source, label];
+}
+
+export function removePresetValue(presets, value) {
+  const source = Array.isArray(presets) ? presets : [];
+  const label = normalizePresetLabel(value);
+  if (!label || label.toLocaleLowerCase() === UNASSIGNED_PRESET.toLocaleLowerCase()) {
+    return [...source];
+  }
+
+  return source.filter(
+    (preset) => preset.toLocaleLowerCase() !== label.toLocaleLowerCase()
+  );
+}
+
+export function remapItemsAfterSourceCategoryPresetRemoval(items, removedPreset) {
+  const removed = normalizePresetLabel(removedPreset);
+  if (!removed || removed.toLocaleLowerCase() === UNASSIGNED_PRESET.toLocaleLowerCase()) {
+    return items;
+  }
+  const removedKey = removed.toLocaleLowerCase();
+
+  return items.map((item) => {
+    const sourceCategories = normalizeSourceCategories(item.sourceCategories);
+    const nextSourceCategories = normalizeSourceCategories(
+      sourceCategories.filter(
+        (sourceCategory) => sourceCategory.toLocaleLowerCase() !== removedKey
+      )
+    );
+    const unchanged =
+      sourceCategories.length === nextSourceCategories.length &&
+      sourceCategories.every((sourceCategory, index) => {
+        return sourceCategory === nextSourceCategories[index];
+      });
+    if (unchanged) {
+      return item;
+    }
+    return {
+      ...item,
+      sourceCategories: nextSourceCategories,
+    };
+  });
+}
+
+export function remapItemsAfterRoomPresetRemoval(items, removedPreset) {
+  const removed = normalizePresetLabel(removedPreset);
+  if (!removed || removed.toLocaleLowerCase() === UNASSIGNED_PRESET.toLocaleLowerCase()) {
+    return items;
+  }
+  const removedKey = removed.toLocaleLowerCase();
+
+  return items.map((item) => {
+    const room = normalizeRoom(item.room);
+    if (room.toLocaleLowerCase() !== removedKey) {
+      return item;
+    }
+    return {
+      ...item,
+      room: UNASSIGNED_PRESET,
+    };
+  });
 }
 
 export function serializeState(state) {
