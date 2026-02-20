@@ -71,6 +71,8 @@ const VALID_VIEWS = new Set(Object.values(VIEWS));
 
 const {
   searchInput,
+  allSourceFilterInput,
+  allRoomFilterInput,
   quickAddForm,
   quickAddNameInput,
   checkReminderChip,
@@ -83,6 +85,7 @@ const {
   settingsView,
   itemList,
   shoppingList,
+  shoppingSourceFilterInput,
   summaryLine,
   shoppingSummaryLine,
   copyShoppingButton,
@@ -116,6 +119,11 @@ const state = {
   updatedAt: initialState.updatedAt || new Date().toISOString(),
   revision: Number.isInteger(initialState.revision) ? initialState.revision : 0,
   query: "",
+  filters: {
+    allSourceCategory: "",
+    allRoom: "",
+    shoppingSourceCategory: "",
+  },
   activeView: VIEWS.ALL,
   editingItemId: "",
   toast: {
@@ -142,12 +150,213 @@ const state = {
   },
 };
 
+function normalizeLabel(value) {
+  return String(value || "").trim();
+}
+
+function normalizeSourceCategories(sourceCategories) {
+  const source = Array.isArray(sourceCategories)
+    ? sourceCategories
+    : sourceCategories
+      ? [sourceCategories]
+      : [];
+  const normalized = [];
+  const seen = new Set();
+
+  for (const rawValue of source) {
+    const label = normalizeLabel(rawValue);
+    if (!label) {
+      continue;
+    }
+    const key = label.toLocaleLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    normalized.push(label);
+  }
+
+  if (normalized.length === 0) {
+    return [UNASSIGNED_PRESET];
+  }
+
+  const withoutUnassigned = normalized.filter(
+    (value) => value.toLocaleLowerCase() !== UNASSIGNED_PRESET.toLocaleLowerCase()
+  );
+  return withoutUnassigned.length > 0 ? withoutUnassigned : [UNASSIGNED_PRESET];
+}
+
+function normalizeRoom(room) {
+  return normalizeLabel(room) || UNASSIGNED_PRESET;
+}
+
+function labelsEqual(left, right) {
+  return normalizeLabel(left).toLocaleLowerCase() ===
+    normalizeLabel(right).toLocaleLowerCase();
+}
+
+function mergeLabels(...collections) {
+  const merged = [];
+  const seen = new Set();
+
+  for (const collection of collections) {
+    if (!Array.isArray(collection)) {
+      continue;
+    }
+
+    for (const rawValue of collection) {
+      const label = normalizeLabel(rawValue);
+      if (!label) {
+        continue;
+      }
+      const key = label.toLocaleLowerCase();
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      merged.push(label);
+    }
+  }
+
+  return merged;
+}
+
+function getSourceCategoryOptions() {
+  const sourceCategoriesFromItems = state.items.flatMap((item) =>
+    normalizeSourceCategories(item.sourceCategories)
+  );
+  return mergeLabels(
+    [UNASSIGNED_PRESET],
+    state.settings.sourceCategoryPresets,
+    sourceCategoriesFromItems
+  );
+}
+
+function getRoomOptions() {
+  const roomsFromItems = state.items.map((item) => normalizeRoom(item.room));
+  return mergeLabels([UNASSIGNED_PRESET], state.settings.roomPresets, roomsFromItems);
+}
+
+function itemMatchesSourceCategory(item, sourceCategoryFilterValue) {
+  const selected = normalizeLabel(sourceCategoryFilterValue);
+  if (!selected) {
+    return true;
+  }
+
+  const itemSourceCategories = normalizeSourceCategories(item.sourceCategories);
+  return itemSourceCategories.some((sourceCategory) =>
+    labelsEqual(sourceCategory, selected)
+  );
+}
+
+function itemMatchesRoom(item, roomFilterValue) {
+  const selected = normalizeLabel(roomFilterValue);
+  if (!selected) {
+    return true;
+  }
+
+  return labelsEqual(normalizeRoom(item.room), selected);
+}
+
+function getPrimarySourceCategory(item) {
+  const sourceCategories = normalizeSourceCategories(item.sourceCategories);
+  return sourceCategories[0] || UNASSIGNED_PRESET;
+}
+
 function getVisibleItems() {
-  return selectVisibleItems(state.items, state.query, false);
+  return selectVisibleItems(state.items, state.query, false).filter((item) => {
+    return (
+      itemMatchesSourceCategory(item, state.filters.allSourceCategory) &&
+      itemMatchesRoom(item, state.filters.allRoom)
+    );
+  });
 }
 
 function getShoppingItems() {
-  return selectVisibleItems(state.items, "", true);
+  return selectVisibleItems(state.items, "", true).filter((item) => {
+    return itemMatchesSourceCategory(item, state.filters.shoppingSourceCategory);
+  });
+}
+
+function getGroupedShoppingItems(items) {
+  if (items.length === 0) {
+    return [];
+  }
+
+  const groupOrder = mergeLabels(
+    state.settings.sourceCategoryPresets,
+    items.map((item) => getPrimarySourceCategory(item)),
+    [UNASSIGNED_PRESET]
+  );
+  const groups = new Map(groupOrder.map((sourceCategory) => [sourceCategory, []]));
+
+  for (const item of items) {
+    const sourceCategory = getPrimarySourceCategory(item);
+    const groupItems = groups.get(sourceCategory);
+    if (!groupItems) {
+      groups.set(sourceCategory, [item]);
+      continue;
+    }
+    groupItems.push(item);
+  }
+
+  return Array.from(groups.entries())
+    .filter(([, groupItems]) => groupItems.length > 0)
+    .map(([sourceCategory, groupItems]) => ({
+      sourceCategory,
+      items: groupItems,
+    }));
+}
+
+function renderFilterSelect(selectNode, options, allLabel, selectedValue) {
+  if (!selectNode) {
+    return "";
+  }
+
+  const normalizedSelected = normalizeLabel(selectedValue);
+  const hasSelection = options.some((option) => labelsEqual(option, normalizedSelected));
+  const effectiveValue = hasSelection ? normalizedSelected : "";
+
+  selectNode.replaceChildren();
+
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.textContent = allLabel;
+  selectNode.appendChild(allOption);
+
+  for (const optionLabel of options) {
+    const optionNode = document.createElement("option");
+    optionNode.value = optionLabel;
+    optionNode.textContent = optionLabel;
+    selectNode.appendChild(optionNode);
+  }
+
+  selectNode.value = effectiveValue;
+  return effectiveValue;
+}
+
+function renderFilterControls() {
+  const sourceCategoryOptions = getSourceCategoryOptions();
+  const roomOptions = getRoomOptions();
+
+  state.filters.allSourceCategory = renderFilterSelect(
+    allSourceFilterInput,
+    sourceCategoryOptions,
+    "All sources",
+    state.filters.allSourceCategory
+  );
+  state.filters.allRoom = renderFilterSelect(
+    allRoomFilterInput,
+    roomOptions,
+    "All rooms",
+    state.filters.allRoom
+  );
+  state.filters.shoppingSourceCategory = renderFilterSelect(
+    shoppingSourceFilterInput,
+    sourceCategoryOptions,
+    "All sources",
+    state.filters.shoppingSourceCategory
+  );
 }
 
 function getNeededQuantity(item) {
@@ -805,6 +1014,8 @@ function renderInventoryPanel(visibleItems, lowCount) {
   renderList(itemList, visibleItems, {
     editingItemId: state.editingItemId,
     defaultCheckIntervalDays: state.settings.defaultCheckIntervalDays,
+    sourceCategoryOptions: getSourceCategoryOptions(),
+    roomOptions: getRoomOptions(),
   });
   renderSummary(summaryLine, state.items.length, lowCount);
 
@@ -813,12 +1024,19 @@ function renderInventoryPanel(visibleItems, lowCount) {
     return;
   }
 
-  emptyState.textContent = "No items match your search.";
+  const hasFilter =
+    Boolean(state.query.trim()) ||
+    Boolean(state.filters.allSourceCategory) ||
+    Boolean(state.filters.allRoom);
+  emptyState.textContent = hasFilter
+    ? "No items match your filters."
+    : "No items yet. Add one above.";
   toggleEmptyState(emptyState, true);
 }
 
 function renderShoppingPanel() {
   const shoppingItems = getShoppingItems();
+  const groupedShoppingItems = getGroupedShoppingItems(shoppingItems);
   const buyQuantityByItemId = getPrunedBuyQuantityByItemId(
     state.items,
     state.shopping.buyQuantityByItemId
@@ -830,7 +1048,7 @@ function renderShoppingPanel() {
   const plannedItemCount = Object.keys(buyQuantityByItemId).length;
 
   state.shopping = { buyQuantityByItemId };
-  renderShoppingList(shoppingList, shoppingItems, buyQuantityByItemId);
+  renderShoppingList(shoppingList, groupedShoppingItems, buyQuantityByItemId);
   shoppingSummaryLine.textContent = `${shoppingItems.length} low stock • ${plannedUnits} planned (${plannedItemCount} items)`;
   copyShoppingButton.disabled = shoppingItems.length === 0;
   shareShoppingButton.disabled = shoppingItems.length === 0;
@@ -844,13 +1062,16 @@ function renderShoppingPanel() {
     return;
   }
 
-  shoppingEmptyState.textContent = "No low-stock items to shop for.";
+  shoppingEmptyState.textContent = state.filters.shoppingSourceCategory
+    ? "No low-stock items in the selected source."
+    : "No low-stock items to shop for.";
   toggleEmptyState(shoppingEmptyState, true);
 }
 
 function render() {
   const isSettings = state.activeView === VIEWS.SETTINGS;
   const isShopping = state.activeView === VIEWS.SHOPPING;
+  renderFilterControls();
   const visibleItems = getVisibleItems();
   const lowCount = state.items.filter(isLowStock).length;
   applyThemeMode(state.settings.themeMode);
@@ -1001,9 +1222,13 @@ function saveItemEdits(itemId, input) {
     clampQuantity(input.targetQuantity),
     lowThreshold + 1
   );
+  const sourceCategories = normalizeSourceCategories(input.sourceCategories);
+  const room = normalizeRoom(input.room);
   let changedName = false;
   let changedThreshold = false;
   let changedTarget = false;
+  let changedSourceCategories = false;
+  let changedRoom = false;
   let changed = false;
 
   state.items = state.items.map((item) => {
@@ -1014,7 +1239,19 @@ function saveItemEdits(itemId, input) {
     changedName = item.name !== name;
     changedThreshold = item.lowThreshold !== lowThreshold;
     changedTarget = item.targetQuantity !== targetQuantity;
-    changed = changedName || changedThreshold || changedTarget;
+    const currentSourceCategories = normalizeSourceCategories(item.sourceCategories);
+    changedSourceCategories =
+      currentSourceCategories.length !== sourceCategories.length ||
+      currentSourceCategories.some((sourceCategory, index) => {
+        return !labelsEqual(sourceCategory, sourceCategories[index]);
+      });
+    changedRoom = !labelsEqual(normalizeRoom(item.room), room);
+    changed =
+      changedName ||
+      changedThreshold ||
+      changedTarget ||
+      changedSourceCategories ||
+      changedRoom;
     if (!changed) {
       return item;
     }
@@ -1024,6 +1261,8 @@ function saveItemEdits(itemId, input) {
       name,
       lowThreshold,
       targetQuantity,
+      sourceCategories,
+      room,
     };
   });
 
@@ -1043,10 +1282,31 @@ function saveItemEdits(itemId, input) {
   if (changedTarget) {
     changedParts.push("target");
   }
+  if (changedSourceCategories) {
+    changedParts.push("source categories");
+  }
+  if (changedRoom) {
+    changedParts.push("room");
+  }
 
   showToast(`Updated ${changedParts.join(" and ")}.`, "success");
   setSettingsNotice("", "");
   persistAndRender({ touchUpdatedAt: true });
+}
+
+function setAllSourceFilter(value) {
+  state.filters.allSourceCategory = normalizeLabel(value);
+  render();
+}
+
+function setAllRoomFilter(value) {
+  state.filters.allRoom = normalizeLabel(value);
+  render();
+}
+
+function setShoppingSourceFilter(value) {
+  state.filters.shoppingSourceCategory = normalizeLabel(value);
+  render();
 }
 
 function addSourceCategoryPreset(value) {
@@ -1092,6 +1352,12 @@ function removeSourceCategoryPreset(value) {
     sourceCategoryPresets: nextPresets,
   };
   state.items = remapItemsAfterSourceCategoryPresetRemoval(state.items, value);
+  if (labelsEqual(state.filters.allSourceCategory, value)) {
+    state.filters.allSourceCategory = "";
+  }
+  if (labelsEqual(state.filters.shoppingSourceCategory, value)) {
+    state.filters.shoppingSourceCategory = "";
+  }
   setSettingsNotice("Source category preset removed. Affected items moved to Unassigned.", "success");
   persistAndRender({ touchUpdatedAt: false });
 }
@@ -1107,6 +1373,9 @@ function removeRoomPreset(value) {
     roomPresets: nextPresets,
   };
   state.items = remapItemsAfterRoomPresetRemoval(state.items, value);
+  if (labelsEqual(state.filters.allRoom, value)) {
+    state.filters.allRoom = "";
+  }
   setSettingsNotice("Room preset removed. Affected items moved to Unassigned.", "success");
   persistAndRender({ touchUpdatedAt: false });
 }
@@ -1293,6 +1562,8 @@ function addItem(input) {
       name,
       quantity: input.quantity,
       lowThreshold: input.lowThreshold,
+      sourceCategories: input.sourceCategories,
+      room: input.room,
       category: input.category,
     },
     state.settings
@@ -1317,6 +1588,8 @@ function addItemFromQuickForm() {
     name: quickAddNameInput.value,
     quantity: 1,
     lowThreshold: "",
+    sourceCategories: [UNASSIGNED_PRESET],
+    room: UNASSIGNED_PRESET,
     category: "",
   });
 
@@ -1490,6 +1763,11 @@ function resetLocalData() {
   state.updatedAt = defaults.updatedAt || new Date().toISOString();
   state.revision = defaults.revision;
   state.query = "";
+  state.filters = {
+    allSourceCategory: "",
+    allRoom: "",
+    shoppingSourceCategory: "",
+  };
   searchInput.value = "";
   setSettingsNotice("Local data reset to starter defaults.", "success");
   persistAndRender({ touchUpdatedAt: false });
@@ -1566,6 +1844,9 @@ bindAppEvents({
   undoDelete,
   onStorageStateChange: handleStorageStateChange,
   updateViewportOffsetBottom,
+  setAllSourceFilter,
+  setAllRoomFilter,
+  setShoppingSourceFilter,
 });
 
 updateViewportOffsetBottom();

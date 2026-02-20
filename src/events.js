@@ -34,9 +34,14 @@ export function bindAppEvents({
   undoDelete,
   onStorageStateChange,
   updateViewportOffsetBottom,
+  setAllSourceFilter,
+  setAllRoomFilter,
+  setShoppingSourceFilter,
 }) {
   const {
     searchInput,
+    allSourceFilterInput,
+    allRoomFilterInput,
     defaultThresholdInput,
     defaultCheckIntervalInput,
     themeModeInput,
@@ -47,6 +52,7 @@ export function bindAppEvents({
     roomPresetInput,
     roomPresetList,
     quickAddForm,
+    shoppingSourceFilterInput,
     exportDataButton,
     importDataButton,
     importDataInput,
@@ -66,6 +72,18 @@ export function bindAppEvents({
   searchInput.addEventListener("input", (event) => {
     state.query = event.target.value;
     render();
+  });
+
+  allSourceFilterInput.addEventListener("change", (event) => {
+    setAllSourceFilter(event.target.value);
+  });
+
+  allRoomFilterInput.addEventListener("change", (event) => {
+    setAllRoomFilter(event.target.value);
+  });
+
+  shoppingSourceFilterInput.addEventListener("change", (event) => {
+    setShoppingSourceFilter(event.target.value);
   });
 
   defaultThresholdInput.addEventListener("change", (event) => {
@@ -263,6 +281,8 @@ export function bindAppEvents({
       name: formData.get("name"),
       lowThreshold: formData.get("lowThreshold"),
       targetQuantity: formData.get("targetQuantity"),
+      sourceCategories: formData.getAll("sourceCategories"),
+      room: formData.get("room"),
     });
   });
 

@@ -145,6 +145,148 @@ test("settings can add and remove source and room presets", async ({ page }) => 
   await expect(page.locator("#room-preset-list")).not.toContainText("Guest Room");
 });
 
+test("all view filters by source category and room", async ({ page }) => {
+  const soapRow = itemRow(page, "Dish Soap");
+  await soapRow.getByRole("button", { name: "Edit Dish Soap" }).click();
+  const editForm = page.locator('.item-edit-form[aria-label="Edit Dish Soap"]');
+
+  await editForm.getByLabel("Online").check();
+  await editForm.getByLabel("Room for Dish Soap").selectOption("Pantry");
+  await editForm.getByRole("button", { name: "Save edits for Dish Soap" }).click();
+
+  await expect(soapRow.locator(".item-context")).toContainText("Online");
+  await expect(soapRow.locator(".item-context")).toContainText("Room: Pantry");
+
+  await page.selectOption("#all-source-filter-input", "Online");
+  await expect(itemRow(page, "Dish Soap")).toHaveCount(1);
+  await expect(itemRow(page, "Toothpaste")).toHaveCount(0);
+
+  await page.selectOption("#all-room-filter-input", "Pantry");
+  await expect(itemRow(page, "Dish Soap")).toHaveCount(1);
+
+  await page.selectOption("#all-room-filter-input", "Bathroom");
+  await expect(itemRow(page, "Dish Soap")).toHaveCount(0);
+});
+
+test("shopping view groups by source and supports source filtering", async ({
+  page,
+}) => {
+  await page.evaluate((storageKey) => {
+    const timestamp = "2026-02-20T00:00:00.000Z";
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        items: [
+          {
+            id: "dish-soap",
+            name: "Dish Soap",
+            quantity: 0,
+            lowThreshold: 1,
+            targetQuantity: 2,
+            sourceCategories: ["Grocery", "Online"],
+            room: "Kitchen",
+            checkIntervalDays: 14,
+            lastCheckedAt: timestamp,
+            updatedAt: timestamp,
+          },
+          {
+            id: "toothpaste",
+            name: "Toothpaste",
+            quantity: 0,
+            lowThreshold: 1,
+            targetQuantity: 3,
+            sourceCategories: ["Pharmacy"],
+            room: "Bathroom",
+            checkIntervalDays: 14,
+            lastCheckedAt: timestamp,
+            updatedAt: timestamp,
+          },
+          {
+            id: "paper-towels",
+            name: "Paper Towels",
+            quantity: 0,
+            lowThreshold: 1,
+            targetQuantity: 2,
+            sourceCategories: ["Unassigned"],
+            room: "Laundry",
+            checkIntervalDays: 14,
+            lastCheckedAt: timestamp,
+            updatedAt: timestamp,
+          },
+        ],
+        settings: {
+          defaultLowThreshold: 1,
+          themeMode: "light",
+          defaultCheckIntervalDays: 14,
+          sourceCategoryPresets: ["Grocery", "Pharmacy", "Online"],
+          roomPresets: ["Kitchen", "Bathroom", "Laundry"],
+        },
+        shopping: { buyQuantityByItemId: {} },
+        updatedAt: timestamp,
+        revision: 1,
+      })
+    );
+  }, STORAGE_KEY);
+  await page.reload();
+
+  await page.getByRole("button", { name: "Open shopping view" }).click();
+  await expect(page.locator(".shopping-group-title")).toHaveText([
+    "Grocery",
+    "Pharmacy",
+    "Unassigned",
+  ]);
+  await expect(shoppingRow(page, "Dish Soap").locator(".shopping-tags")).toContainText(
+    "Online"
+  );
+
+  await page.selectOption("#shopping-source-filter-input", "Pharmacy");
+  await expect(shoppingRow(page, "Toothpaste")).toHaveCount(1);
+  await expect(shoppingRow(page, "Dish Soap")).toHaveCount(0);
+  await expect(shoppingRow(page, "Paper Towels")).toHaveCount(0);
+});
+
+test("removing source and room presets remaps affected items to Unassigned", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Open settings view" }).click();
+  await page.locator("#source-category-preset-input").fill("Corner Shop");
+  await page.getByRole("button", { name: "Add source category preset" }).click();
+  await page.locator("#room-preset-input").fill("Hall");
+  await page.getByRole("button", { name: "Add room preset" }).click();
+
+  await page.getByRole("button", { name: "Open all items view" }).click();
+  const soapRow = itemRow(page, "Dish Soap");
+  await soapRow.getByRole("button", { name: "Edit Dish Soap" }).click();
+  const editForm = page.locator('.item-edit-form[aria-label="Edit Dish Soap"]');
+
+  await editForm.getByLabel("Grocery").uncheck();
+  await editForm.getByLabel("Corner Shop").check();
+  await editForm.getByLabel("Room for Dish Soap").selectOption("Hall");
+  await editForm.getByRole("button", { name: "Save edits for Dish Soap" }).click();
+
+  await page.getByRole("button", { name: "Open settings view" }).click();
+  await page
+    .locator(
+      '#source-category-preset-list [data-action="remove-source-category-preset"][data-preset="Corner Shop"]'
+    )
+    .click();
+  await page
+    .locator(
+      '#room-preset-list [data-action="remove-room-preset"][data-preset="Hall"]'
+    )
+    .click();
+
+  await page.getByRole("button", { name: "Open all items view" }).click();
+  await itemRow(page, "Dish Soap").getByRole("button", { name: "Edit Dish Soap" }).click();
+  const remappedForm = page.locator('.item-edit-form[aria-label="Edit Dish Soap"]');
+  await expect(
+    remappedForm.locator('input[name="sourceCategories"][value="Unassigned"]')
+  ).toBeChecked();
+  await expect(remappedForm.getByLabel("Room for Dish Soap")).toHaveValue(
+    "Unassigned"
+  );
+});
+
 test("overdue reminder appears and confirm quantity clears it", async ({ page }) => {
   await page.evaluate((storageKey) => {
     const now = Date.now();

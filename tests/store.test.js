@@ -240,6 +240,27 @@ test("normalizeState migrates legacy item category to room and keeps source unas
   assert.equal(state.items[0].lastCheckedAt, state.items[0].updatedAt);
 });
 
+test("normalizeState migrates legacy sourceCategory field to sourceCategories", () => {
+  const state = normalizeState({
+    items: [
+      {
+        id: "legacy-source",
+        name: "Soap",
+        quantity: 1,
+        lowThreshold: 1,
+        sourceCategory: "Online",
+      },
+    ],
+    settings: {
+      defaultLowThreshold: 1,
+      defaultCheckIntervalDays: 14,
+    },
+  });
+
+  assert.deepEqual(state.items[0].sourceCategories, ["Online"]);
+  assert.equal(state.items[0].room, UNASSIGNED_PRESET);
+});
+
 test("normalizeState keeps only positive buy quantities", () => {
   const state = normalizeState({
     items: [
