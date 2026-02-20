@@ -3,8 +3,13 @@ import assert from "node:assert/strict";
 
 import {
   clampQuantity,
+  getCheckBaselineTimestamp,
+  getCheckIntervalDays,
+  getNextCheckTimestamp,
+  isCheckOverdue,
   isLowStock,
   matchesSearch,
+  parseTimestamp,
   selectVisibleItems,
 } from "../src/logic.js";
 
@@ -48,4 +53,68 @@ test("selectVisibleItems supports all/low-stock filtering and sorting", () => {
     (item) => item.name
   );
   assert.deepEqual(filteredLowStock, ["Dish Soap"]);
+});
+
+test("parseTimestamp returns 0 for invalid dates", () => {
+  assert.equal(parseTimestamp("2026-02-20T00:00:00.000Z") > 0, true);
+  assert.equal(parseTimestamp("nope"), 0);
+  assert.equal(parseTimestamp(""), 0);
+});
+
+test("getCheckIntervalDays uses item value and falls back safely", () => {
+  assert.equal(getCheckIntervalDays({ checkIntervalDays: 21 }, 14), 21);
+  assert.equal(getCheckIntervalDays({ checkIntervalDays: "7" }, 14), 7);
+  assert.equal(getCheckIntervalDays({ checkIntervalDays: 0 }, 14), 14);
+  assert.equal(getCheckIntervalDays({}, 0), 1);
+});
+
+test("getCheckBaselineTimestamp prefers lastCheckedAt then updatedAt", () => {
+  const withLastChecked = {
+    lastCheckedAt: "2026-02-10T00:00:00.000Z",
+    updatedAt: "2026-02-01T00:00:00.000Z",
+  };
+  const withUpdatedOnly = {
+    updatedAt: "2026-02-01T00:00:00.000Z",
+  };
+  const withInvalidLastChecked = {
+    lastCheckedAt: "bad",
+    updatedAt: "2026-02-01T00:00:00.000Z",
+  };
+
+  assert.equal(
+    getCheckBaselineTimestamp(withLastChecked),
+    parseTimestamp("2026-02-10T00:00:00.000Z")
+  );
+  assert.equal(
+    getCheckBaselineTimestamp(withUpdatedOnly),
+    parseTimestamp("2026-02-01T00:00:00.000Z")
+  );
+  assert.equal(
+    getCheckBaselineTimestamp(withInvalidLastChecked),
+    parseTimestamp("2026-02-01T00:00:00.000Z")
+  );
+  assert.equal(getCheckBaselineTimestamp({}), 0);
+});
+
+test("getNextCheckTimestamp and isCheckOverdue compute due status from baseline", () => {
+  const baselineIso = "2026-02-01T00:00:00.000Z";
+  const item = {
+    lastCheckedAt: baselineIso,
+    checkIntervalDays: 14,
+  };
+
+  const baseline = parseTimestamp(baselineIso);
+  const dueTimestamp = baseline + 14 * 24 * 60 * 60 * 1000;
+  assert.equal(getNextCheckTimestamp(item, 14), dueTimestamp);
+  assert.equal(isCheckOverdue(item, dueTimestamp - 1, 14), false);
+  assert.equal(isCheckOverdue(item, dueTimestamp, 14), true);
+
+  const fallbackIntervalItem = {
+    updatedAt: baselineIso,
+    checkIntervalDays: 0,
+  };
+  assert.equal(
+    getNextCheckTimestamp(fallbackIntervalItem, 10),
+    baseline + 10 * 24 * 60 * 60 * 1000
+  );
 });

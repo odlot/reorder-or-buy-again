@@ -2,6 +2,8 @@ import {
   isLowStock,
   selectVisibleItems,
   clampQuantity,
+  getNextCheckTimestamp,
+  isCheckOverdue,
 } from "./logic.js";
 import {
   STORAGE_KEY,
@@ -63,6 +65,7 @@ const SUPPORTS_WEB_SHARE =
   typeof navigator.share === "function";
 const DELETE_UNDO_MS = 8000;
 const TOAST_AUTO_HIDE_MS = 2600;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const VALID_VIEWS = new Set(Object.values(VIEWS));
 
@@ -70,6 +73,9 @@ const {
   searchInput,
   quickAddForm,
   quickAddNameInput,
+  checkReminderChip,
+  checkReminderPanel,
+  checkReminderText,
   syncStatusChip,
   listToolbar,
   inventoryView,
@@ -740,6 +746,51 @@ function renderSettingsPanel() {
   );
 }
 
+function getOverdueCheckItems(nowTimestamp = Date.now()) {
+  const fallbackDays = state.settings.defaultCheckIntervalDays;
+  return state.items
+    .filter((item) => isCheckOverdue(item, nowTimestamp, fallbackDays))
+    .sort((a, b) => {
+      const aNext = getNextCheckTimestamp(a, fallbackDays);
+      const bNext = getNextCheckTimestamp(b, fallbackDays);
+      if (aNext !== bNext) {
+        return aNext - bNext;
+      }
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    });
+}
+
+function renderCheckReminderState(nowTimestamp = Date.now()) {
+  const overdueItems = getOverdueCheckItems(nowTimestamp);
+  if (overdueItems.length === 0) {
+    checkReminderChip.classList.add("hidden");
+    checkReminderPanel.classList.add("hidden");
+    checkReminderText.textContent = "";
+    return;
+  }
+
+  const checkNoun = overdueItems.length === 1 ? "check" : "checks";
+  checkReminderChip.textContent = `${overdueItems.length} ${checkNoun} due`;
+  checkReminderChip.classList.remove("hidden");
+
+  const mostOverdueItem = overdueItems[0];
+  const oldestDueAt = getNextCheckTimestamp(
+    mostOverdueItem,
+    state.settings.defaultCheckIntervalDays
+  );
+  const oldestDaysOverdue = Math.max(
+    0,
+    Math.floor((nowTimestamp - oldestDueAt) / DAY_MS)
+  );
+  const overdueLabel =
+    oldestDaysOverdue === 0 ? "due today" : `${oldestDaysOverdue}d overdue`;
+  checkReminderText.textContent = `${overdueItems.length} items need quantity confirmation. Oldest: ${mostOverdueItem.name} (${overdueLabel}).`;
+  checkReminderPanel.classList.toggle(
+    "hidden",
+    state.activeView !== VIEWS.ALL || overdueItems.length === 0
+  );
+}
+
 function renderInventoryPanel(visibleItems, lowCount) {
   if (!state.items.some((item) => item.id === state.editingItemId)) {
     state.editingItemId = "";
@@ -751,7 +802,10 @@ function renderInventoryPanel(visibleItems, lowCount) {
     state.editingItemId = "";
   }
 
-  renderList(itemList, visibleItems, { editingItemId: state.editingItemId });
+  renderList(itemList, visibleItems, {
+    editingItemId: state.editingItemId,
+    defaultCheckIntervalDays: state.settings.defaultCheckIntervalDays,
+  });
   renderSummary(summaryLine, state.items.length, lowCount);
 
   if (visibleItems.length > 0) {
@@ -818,6 +872,7 @@ function render() {
 
   shoppingBadge.textContent = lowCount > 99 ? "99+" : String(lowCount);
   shoppingBadge.classList.toggle("hidden", lowCount === 0);
+  renderCheckReminderState();
   renderSyncStatus();
 
   const hasUndo = Boolean(state.pendingDelete);
@@ -878,6 +933,32 @@ function setQuantity(itemId, nextQuantity) {
   persistAndRender();
 }
 
+function confirmItemCheck(itemId) {
+  const now = new Date().toISOString();
+  let confirmedItemName = "";
+
+  state.items = state.items.map((item) => {
+    if (item.id !== itemId) {
+      return item;
+    }
+
+    confirmedItemName = item.name;
+    return {
+      ...item,
+      lastCheckedAt: now,
+      updatedAt: now,
+    };
+  });
+
+  if (!confirmedItemName) {
+    return;
+  }
+
+  showToast(`Confirmed ${confirmedItemName} quantity.`, "success");
+  setSettingsNotice("", "");
+  persistAndRender({ touchUpdatedAt: true });
+}
+
 function startEditingItemById(itemId) {
   const item = state.items.find((entry) => entry.id === itemId);
   if (!item) {
@@ -920,7 +1001,6 @@ function saveItemEdits(itemId, input) {
     clampQuantity(input.targetQuantity),
     lowThreshold + 1
   );
-  const now = new Date().toISOString();
   let changedName = false;
   let changedThreshold = false;
   let changedTarget = false;
@@ -944,7 +1024,6 @@ function saveItemEdits(itemId, input) {
       name,
       lowThreshold,
       targetQuantity,
-      updatedAt: now,
     };
   });
 
@@ -1472,6 +1551,7 @@ bindAppEvents({
   clearSyncLink,
   decodeItemId,
   setQuantity,
+  confirmItemCheck,
   deleteItemById,
   startEditingItemById,
   cancelEditingItem,

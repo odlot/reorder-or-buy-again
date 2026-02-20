@@ -167,6 +167,7 @@ Milestones A, B, and C are implemented:
 - Bottom navigation (`All`, `Shopping`, `Settings`) with low-stock badge
 - Dedicated Shopping view (low-stock items only)
 - Shopping planning actions (`+/-`, quantity input, `Max`, `Apply purchases`, `Copy list`, `Share list`)
+- In-app quantity check reminders with one-tap `Check` confirmation in All view
 - Settings: default threshold, backup import/export, reset local data
 - Import/export JSON backups
 - Local persistence via `localStorage`

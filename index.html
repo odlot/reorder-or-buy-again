@@ -11,6 +11,9 @@
       <header class="app-header">
         <h1>Inventory</h1>
         <p class="subtitle">Quickly track household essentials.</p>
+        <p id="check-reminder-chip" class="check-reminder-chip hidden" aria-live="polite">
+          0 checks due
+        </p>
         <p id="sync-status-chip" class="sync-chip is-offline" aria-live="polite">
           Offline
         </p>
@@ -28,6 +31,9 @@
           />
         </label>
         <p id="summary-line" class="summary-line" aria-live="polite"></p>
+        <section id="check-reminder-panel" class="check-reminder-panel hidden">
+          <p id="check-reminder-text" class="check-reminder-text" aria-live="polite"></p>
+        </section>
 
         <form id="quick-add-form" class="quick-add-form" aria-label="Quick add item">
           <label class="sr-only" for="quick-add-name">Item name</label>

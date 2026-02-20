@@ -76,6 +76,21 @@ body {
   font-size: 0.98rem;
 }
 
+.check-reminder-chip {
+  margin: 0.55rem 0 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.7rem;
+  border: 1px solid #e8d3ac;
+  border-radius: 999px;
+  background: var(--low-bg);
+  color: var(--low-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0 0.65rem;
+}
+
 .sync-chip {
   margin: 0.6rem 0 0;
   display: inline-flex;
@@ -157,6 +172,7 @@ body {
 .item-edit-name-input:focus-visible,
 .item-edit-threshold-input:focus-visible,
 .step-button:focus-visible,
+.confirm-button:focus-visible,
 .shopping-step-button:focus-visible,
 .shopping-max-button:focus-visible,
 .edit-button:focus-visible,
@@ -175,6 +191,21 @@ body {
   margin: 0.65rem 0 0;
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.check-reminder-panel {
+  margin-top: 0.55rem;
+  border: 1px solid #e8d3ac;
+  border-radius: 0.8rem;
+  background: var(--low-bg);
+  padding: 0.55rem 0.7rem;
+}
+
+.check-reminder-text {
+  margin: 0;
+  color: var(--low-text);
+  font-size: 0.84rem;
+  font-weight: 600;
 }
 
 .item-list {
@@ -217,6 +248,17 @@ body {
   color: var(--muted);
 }
 
+.item-freshness {
+  margin: 0.16rem 0 0;
+  font-size: 0.79rem;
+  color: #63735f;
+}
+
+.item-freshness.is-overdue {
+  color: var(--low-text);
+  font-weight: 700;
+}
+
 .low-label {
   display: inline-block;
   margin-left: 0.35rem;
@@ -226,12 +268,13 @@ body {
 
 .controls {
   display: inline-grid;
-  grid-template-columns: 2.75rem 3.1rem 2.75rem 3.1rem 2.75rem;
+  grid-template-columns: 2.75rem 3.1rem 2.75rem 3.1rem 3.1rem 2.75rem;
   gap: 0.35rem;
   align-items: center;
 }
 
 .step-button,
+.confirm-button,
 .edit-button,
 .remove-button {
   border: 1px solid var(--line);
@@ -249,6 +292,13 @@ body {
 
 .step-button[data-step="-1"] {
   color: var(--danger);
+}
+
+.confirm-button {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .edit-button {
@@ -688,6 +738,7 @@ body {
 
 .action-button,
 .step-button,
+.confirm-button,
 .shopping-step-button,
 .shopping-max-button,
 .edit-button,
@@ -774,6 +825,26 @@ body {
   color: #b7e8c7;
 }
 
+:root[data-theme="dark"] .check-reminder-panel {
+  border-color: #7c6a4a;
+  background: #332a1c;
+}
+
+:root[data-theme="dark"] .check-reminder-chip {
+  border-color: #7c6a4a;
+  background: #332a1c;
+  color: #ffd699;
+}
+
+:root[data-theme="dark"] .item-freshness {
+  color: #8fa08e;
+}
+
+:root[data-theme="dark"] .item-freshness.is-overdue,
+:root[data-theme="dark"] .check-reminder-text {
+  color: #ffd699;
+}
+
 @media (min-width: 700px) {
   .app-shell {
     padding-top: 1.6rem;
@@ -800,7 +871,7 @@ body {
 
   .controls {
     width: 100%;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .shopping-controls {
