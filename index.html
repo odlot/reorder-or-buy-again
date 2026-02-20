@@ -117,12 +117,88 @@
         </div>
 
         <div class="settings-group">
+          <label for="default-check-interval-input">
+            Default inventory check interval (days)
+          </label>
+          <input
+            id="default-check-interval-input"
+            type="number"
+            name="defaultCheckIntervalDays"
+            inputmode="numeric"
+            min="1"
+            step="1"
+          />
+        </div>
+
+        <div class="settings-group">
           <label for="theme-mode-input">Theme</label>
           <select id="theme-mode-input" name="themeMode">
             <option value="light">Light</option>
             <option value="dark">Dark</option>
           </select>
         </div>
+
+        <section class="settings-group">
+          <h3>Source Category Presets</h3>
+          <form
+            id="source-category-preset-form"
+            class="preset-form"
+            aria-label="Add source category preset"
+          >
+            <label class="sr-only" for="source-category-preset-input">
+              Source category preset
+            </label>
+            <input
+              id="source-category-preset-input"
+              type="text"
+              name="sourceCategoryPreset"
+              autocomplete="off"
+              maxlength="40"
+              placeholder="Add source category"
+            />
+            <button
+              id="add-source-category-preset-button"
+              class="action-button"
+              type="submit"
+              aria-label="Add source category preset"
+            >
+              Add
+            </button>
+          </form>
+          <ul
+            id="source-category-preset-list"
+            class="preset-chip-list"
+            aria-label="Source category presets"
+          ></ul>
+        </section>
+
+        <section class="settings-group">
+          <h3>Room Presets</h3>
+          <form
+            id="room-preset-form"
+            class="preset-form"
+            aria-label="Add room preset"
+          >
+            <label class="sr-only" for="room-preset-input">Room preset</label>
+            <input
+              id="room-preset-input"
+              type="text"
+              name="roomPreset"
+              autocomplete="off"
+              maxlength="40"
+              placeholder="Add room"
+            />
+            <button
+              id="add-room-preset-button"
+              class="action-button"
+              type="submit"
+              aria-label="Add room preset"
+            >
+              Add
+            </button>
+          </form>
+          <ul id="room-preset-list" class="preset-chip-list" aria-label="Room presets"></ul>
+        </section>
 
         <section class="settings-group">
           <h3>Offline Sync File</h3>

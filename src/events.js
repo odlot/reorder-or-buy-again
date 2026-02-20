@@ -6,6 +6,10 @@ export function bindAppEvents({
   render,
   persistAndRender,
   setSettingsNotice,
+  addSourceCategoryPreset,
+  addRoomPreset,
+  removeSourceCategoryPreset,
+  removeRoomPreset,
   addItemFromQuickForm,
   exportBackup,
   importBackupFile,
@@ -33,7 +37,14 @@ export function bindAppEvents({
   const {
     searchInput,
     defaultThresholdInput,
+    defaultCheckIntervalInput,
     themeModeInput,
+    sourceCategoryPresetForm,
+    sourceCategoryPresetInput,
+    sourceCategoryPresetList,
+    roomPresetForm,
+    roomPresetInput,
+    roomPresetList,
     quickAddForm,
     exportDataButton,
     importDataButton,
@@ -59,16 +70,60 @@ export function bindAppEvents({
   defaultThresholdInput.addEventListener("change", (event) => {
     state.settings.defaultLowThreshold = clampQuantity(event.target.value);
     setSettingsNotice("Default threshold updated.", "success");
-    persistAndRender();
+    persistAndRender({ touchUpdatedAt: false });
+  });
+
+  defaultCheckIntervalInput.addEventListener("change", (event) => {
+    const interval = Math.max(1, clampQuantity(event.target.value));
+    state.settings.defaultCheckIntervalDays = interval;
+    event.target.value = String(interval);
+    setSettingsNotice("Default check interval updated.", "success");
+    persistAndRender({ touchUpdatedAt: false });
   });
 
   if (themeModeInput) {
     themeModeInput.addEventListener("change", (event) => {
       state.settings.themeMode = event.target.value === "dark" ? "dark" : "light";
       setSettingsNotice("Theme updated.", "success");
-      persistAndRender();
+      persistAndRender({ touchUpdatedAt: false });
     });
   }
+
+  sourceCategoryPresetForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const value = sourceCategoryPresetInput.value;
+    sourceCategoryPresetInput.value = "";
+    setSettingsNotice("", "");
+    addSourceCategoryPreset(value);
+  });
+
+  roomPresetForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const value = roomPresetInput.value;
+    roomPresetInput.value = "";
+    setSettingsNotice("", "");
+    addRoomPreset(value);
+  });
+
+  sourceCategoryPresetList.addEventListener("click", (event) => {
+    const removeButton = event.target.closest(
+      '[data-action="remove-source-category-preset"]'
+    );
+    if (!removeButton) {
+      return;
+    }
+    const preset = removeButton.dataset.preset;
+    removeSourceCategoryPreset(preset);
+  });
+
+  roomPresetList.addEventListener("click", (event) => {
+    const removeButton = event.target.closest('[data-action="remove-room-preset"]');
+    if (!removeButton) {
+      return;
+    }
+    const preset = removeButton.dataset.preset;
+    removeRoomPreset(preset);
+  });
 
   quickAddForm.addEventListener("submit", (event) => {
     event.preventDefault();

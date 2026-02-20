@@ -11,9 +11,14 @@ import {
   updateItemQuantity,
   upsertItem,
   removeItem,
+  UNASSIGNED_PRESET,
   createDefaultState,
   serializeState,
   deserializeState,
+  upsertPresetValue,
+  removePresetValue,
+  remapItemsAfterSourceCategoryPresetRemoval,
+  remapItemsAfterRoomPresetRemoval,
 } from "./store.js";
 import {
   renderList,
@@ -85,12 +90,15 @@ const {
   undoMessage,
   undoButton,
   defaultThresholdInput,
+  defaultCheckIntervalInput,
   themeModeInput,
+  sourceCategoryPresetList,
   syncStatusDetail,
   syncLastSynced,
   linkSyncButton,
   syncNowButton,
   clearSyncLinkButton,
+  roomPresetList,
   settingsMessage,
 } = dom;
 
@@ -674,11 +682,52 @@ function scheduleUndo(item, index) {
   };
 }
 
+function renderPresetChipList(listNode, presets, { removeAction, removeLabel }) {
+  listNode.replaceChildren();
+
+  const unassignedChip = document.createElement("li");
+  unassignedChip.className = "preset-chip preset-chip-static";
+  const unassignedLabel = document.createElement("span");
+  unassignedLabel.className = "preset-chip-label";
+  unassignedLabel.textContent = UNASSIGNED_PRESET;
+  unassignedChip.appendChild(unassignedLabel);
+  listNode.appendChild(unassignedChip);
+
+  for (const preset of presets) {
+    const item = document.createElement("li");
+    item.className = "preset-chip";
+
+    const label = document.createElement("span");
+    label.className = "preset-chip-label";
+    label.textContent = preset;
+
+    const removeButton = document.createElement("button");
+    removeButton.className = "preset-chip-remove";
+    removeButton.type = "button";
+    removeButton.dataset.action = removeAction;
+    removeButton.dataset.preset = preset;
+    removeButton.setAttribute("aria-label", removeLabel);
+    removeButton.textContent = "×";
+
+    item.append(label, removeButton);
+    listNode.appendChild(item);
+  }
+}
+
 function renderSettingsPanel() {
   defaultThresholdInput.value = String(state.settings.defaultLowThreshold);
+  defaultCheckIntervalInput.value = String(state.settings.defaultCheckIntervalDays);
   if (themeModeInput) {
     themeModeInput.value = normalizeThemeMode(state.settings.themeMode);
   }
+  renderPresetChipList(sourceCategoryPresetList, state.settings.sourceCategoryPresets, {
+    removeAction: "remove-source-category-preset",
+    removeLabel: "Remove source category preset",
+  });
+  renderPresetChipList(roomPresetList, state.settings.roomPresets, {
+    removeAction: "remove-room-preset",
+    removeLabel: "Remove room preset",
+  });
 
   settingsMessage.textContent = state.settingsNotice.text;
   settingsMessage.classList.toggle(
@@ -919,6 +968,68 @@ function saveItemEdits(itemId, input) {
   showToast(`Updated ${changedParts.join(" and ")}.`, "success");
   setSettingsNotice("", "");
   persistAndRender({ touchUpdatedAt: true });
+}
+
+function addSourceCategoryPreset(value) {
+  const nextPresets = upsertPresetValue(state.settings.sourceCategoryPresets, value);
+  if (nextPresets.length === state.settings.sourceCategoryPresets.length) {
+    setSettingsNotice("Source category already exists or is invalid.", "error");
+    render();
+    return;
+  }
+
+  state.settings = {
+    ...state.settings,
+    sourceCategoryPresets: nextPresets,
+  };
+  setSettingsNotice("Source category preset added.", "success");
+  persistAndRender({ touchUpdatedAt: false });
+}
+
+function addRoomPreset(value) {
+  const nextPresets = upsertPresetValue(state.settings.roomPresets, value);
+  if (nextPresets.length === state.settings.roomPresets.length) {
+    setSettingsNotice("Room preset already exists or is invalid.", "error");
+    render();
+    return;
+  }
+
+  state.settings = {
+    ...state.settings,
+    roomPresets: nextPresets,
+  };
+  setSettingsNotice("Room preset added.", "success");
+  persistAndRender({ touchUpdatedAt: false });
+}
+
+function removeSourceCategoryPreset(value) {
+  const nextPresets = removePresetValue(state.settings.sourceCategoryPresets, value);
+  if (nextPresets.length === state.settings.sourceCategoryPresets.length) {
+    return;
+  }
+
+  state.settings = {
+    ...state.settings,
+    sourceCategoryPresets: nextPresets,
+  };
+  state.items = remapItemsAfterSourceCategoryPresetRemoval(state.items, value);
+  setSettingsNotice("Source category preset removed. Affected items moved to Unassigned.", "success");
+  persistAndRender({ touchUpdatedAt: false });
+}
+
+function removeRoomPreset(value) {
+  const nextPresets = removePresetValue(state.settings.roomPresets, value);
+  if (nextPresets.length === state.settings.roomPresets.length) {
+    return;
+  }
+
+  state.settings = {
+    ...state.settings,
+    roomPresets: nextPresets,
+  };
+  state.items = remapItemsAfterRoomPresetRemoval(state.items, value);
+  setSettingsNotice("Room preset removed. Affected items moved to Unassigned.", "success");
+  persistAndRender({ touchUpdatedAt: false });
 }
 
 function setShoppingBuyQuantity(itemId, nextBuyQuantity) {
@@ -1348,6 +1459,10 @@ bindAppEvents({
   render,
   persistAndRender,
   setSettingsNotice,
+  addSourceCategoryPreset,
+  addRoomPreset,
+  removeSourceCategoryPreset,
+  removeRoomPreset,
   addItemFromQuickForm,
   exportBackup,
   importBackupFile,

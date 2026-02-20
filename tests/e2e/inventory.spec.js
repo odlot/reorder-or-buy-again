@@ -106,6 +106,38 @@ test("action controls expose labels and finger-sized tap targets", async ({
   await expectTapTarget(shareShopping);
 });
 
+test("settings can add and remove source and room presets", async ({ page }) => {
+  await page.getByRole("button", { name: "Open settings view" }).click();
+
+  const sourceInput = page.locator("#source-category-preset-input");
+  await sourceInput.fill("Farmer Market");
+  await page.getByRole("button", { name: "Add source category preset" }).click();
+  await expect(page.locator("#source-category-preset-list")).toContainText(
+    "Farmer Market"
+  );
+
+  await page
+    .locator(
+      '#source-category-preset-list [data-action="remove-source-category-preset"][data-preset="Farmer Market"]'
+    )
+    .click();
+  await expect(page.locator("#source-category-preset-list")).not.toContainText(
+    "Farmer Market"
+  );
+
+  const roomInput = page.locator("#room-preset-input");
+  await roomInput.fill("Guest Room");
+  await page.getByRole("button", { name: "Add room preset" }).click();
+  await expect(page.locator("#room-preset-list")).toContainText("Guest Room");
+
+  await page
+    .locator(
+      '#room-preset-list [data-action="remove-room-preset"][data-preset="Guest Room"]'
+    )
+    .click();
+  await expect(page.locator("#room-preset-list")).not.toContainText("Guest Room");
+});
+
 test("plus/minus controls update quantity", async ({ page }) => {
   const row = itemRow(page, "Dish Soap");
   const quantityInput = row.locator(".qty-input");
