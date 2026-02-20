@@ -1,5 +1,7 @@
 export const dom = {
   searchInput: document.querySelector("#search-input"),
+  allSourceFilterInput: document.querySelector("#all-source-filter-input"),
+  allRoomFilterInput: document.querySelector("#all-room-filter-input"),
   quickAddForm: document.querySelector("#quick-add-form"),
   quickAddNameInput: document.querySelector("#quick-add-name"),
   checkReminderChip: document.querySelector("#check-reminder-chip"),
@@ -12,6 +14,7 @@ export const dom = {
   settingsView: document.querySelector("#settings-view"),
   itemList: document.querySelector("#item-list"),
   shoppingList: document.querySelector("#shopping-list"),
+  shoppingSourceFilterInput: document.querySelector("#shopping-source-filter-input"),
   summaryLine: document.querySelector("#summary-line"),
   shoppingSummaryLine: document.querySelector("#shopping-summary-line"),
   copyShoppingButton: document.querySelector("#copy-shopping-button"),

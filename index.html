@@ -30,6 +30,20 @@
             placeholder="Search items"
           />
         </label>
+        <div class="filter-row" aria-label="Inventory filters">
+          <label class="filter-field" for="all-source-filter-input">
+            <span>Source</span>
+            <select id="all-source-filter-input" name="allSourceFilter">
+              <option value="">All sources</option>
+            </select>
+          </label>
+          <label class="filter-field" for="all-room-filter-input">
+            <span>Room</span>
+            <select id="all-room-filter-input" name="allRoomFilter">
+              <option value="">All rooms</option>
+            </select>
+          </label>
+        </div>
         <p id="summary-line" class="summary-line" aria-live="polite"></p>
         <section id="check-reminder-panel" class="check-reminder-panel hidden">
           <p id="check-reminder-text" class="check-reminder-text" aria-live="polite"></p>
@@ -70,6 +84,12 @@
         aria-label="Shopping list"
       >
         <div class="shopping-toolbar">
+          <label class="filter-field shopping-filter-field" for="shopping-source-filter-input">
+            <span>Source</span>
+            <select id="shopping-source-filter-input" name="shoppingSourceFilter">
+              <option value="">All sources</option>
+            </select>
+          </label>
           <p id="shopping-summary-line" class="summary-line" aria-live="polite"></p>
           <div class="shopping-actions">
             <button
@@ -98,7 +118,7 @@
             </button>
           </div>
         </div>
-        <ul id="shopping-list" class="shopping-list"></ul>
+        <div id="shopping-list" class="shopping-list"></div>
         <p id="shopping-empty-state" class="empty-state hidden">
           No low-stock items to shop for.
         </p>

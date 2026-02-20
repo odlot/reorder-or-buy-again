@@ -88,9 +88,9 @@
 
 ### 11. Shopping Context + Validation Cadence
 
-- [ ] Add per-item purchase source/category tags (e.g., mall, online, specialty store).
-- [ ] Add per-item storage room/location field (e.g., kitchen, laundry, garage).
-- [ ] Add category/source and room filters in inventory and shopping views.
+- [x] Add per-item purchase source/category tags (e.g., mall, online, specialty store).
+- [x] Add per-item storage room/location field (e.g., kitchen, laundry, garage).
+- [x] Add category/source and room filters in inventory, with source-focused filtering/grouping in shopping.
 - [x] Keep and surface `updatedAt` in the UI for inventory validation checks.
 - [x] Add reminder scheduling for periodic quantity confirmation.
 - [x] Track per-item quantity confirmation metadata (`lastCheckedAt`, `checkIntervalDays`).
