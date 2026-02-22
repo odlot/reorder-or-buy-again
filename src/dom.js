@@ -4,6 +4,7 @@ export const dom = {
   allRoomFilterInput: document.querySelector("#all-room-filter-input"),
   statusFilterAllButton: document.querySelector("#status-filter-all"),
   statusFilterDueButton: document.querySelector("#status-filter-due"),
+  bulkEditToggleButton: document.querySelector("#bulk-edit-toggle-button"),
   quickAddForm: document.querySelector("#quick-add-form"),
   quickAddNameInput: document.querySelector("#quick-add-name"),
   checkReminderChip: document.querySelector("#check-reminder-chip"),
@@ -25,6 +26,18 @@ export const dom = {
   shareShoppingButton: document.querySelector("#share-shopping-button"),
   applyPurchasedButton: document.querySelector("#apply-purchased-button"),
   emptyState: document.querySelector("#empty-state"),
+  bulkEditPanel: document.querySelector("#bulk-edit-panel"),
+  bulkEditSelectionSummary: document.querySelector("#bulk-edit-selection-summary"),
+  bulkEditSourceList: document.querySelector("#bulk-edit-source-list"),
+  bulkEditRoomSelect: document.querySelector("#bulk-edit-room-select"),
+  bulkEditCheckIntervalInput: document.querySelector(
+    "#bulk-edit-check-interval-input"
+  ),
+  bulkEditClearSelectionButton: document.querySelector(
+    "#bulk-edit-clear-selection-button"
+  ),
+  bulkEditCancelButton: document.querySelector("#bulk-edit-cancel-button"),
+  bulkEditApplyButton: document.querySelector("#bulk-edit-apply-button"),
   shoppingEmptyState: document.querySelector("#shopping-empty-state"),
   navTabs: document.querySelectorAll(".nav-tab"),
   shoppingBadge: document.querySelector("#shopping-badge"),

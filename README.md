@@ -170,6 +170,7 @@ Milestones A, B, and C are implemented:
 - In-app quantity check reminders with one-tap `Check`, dedicated `Due checks` filter, and bulk `Confirm all due` action
 - Per-item source categories (multi-select) and room assignment, with source/room filtering
 - Shopping grouped by source category, including `Unassigned` fallback and per-row source tags
+- Bulk edit mode for multi-select updates of source categories, room, and check interval
 - Settings: default threshold, backup import/export, reset local data
 - Import/export JSON backups
 - Local persistence via `localStorage`

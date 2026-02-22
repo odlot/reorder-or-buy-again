@@ -63,6 +63,17 @@
           </button>
         </div>
         <p id="summary-line" class="summary-line" aria-live="polite"></p>
+        <div class="bulk-toggle-row">
+          <button
+            id="bulk-edit-toggle-button"
+            class="action-button"
+            type="button"
+            aria-label="Toggle bulk edit mode"
+            aria-pressed="false"
+          >
+            Bulk edit
+          </button>
+        </div>
         <section id="check-reminder-panel" class="check-reminder-panel hidden">
           <p id="check-reminder-text" class="check-reminder-text" aria-live="polite"></p>
           <div class="check-reminder-actions">
@@ -105,6 +116,71 @@
             Add
           </button>
         </form>
+
+        <section
+          id="bulk-edit-panel"
+          class="bulk-edit-panel hidden"
+          aria-label="Bulk edit selected inventory items"
+        >
+          <p
+            id="bulk-edit-selection-summary"
+            class="bulk-edit-selection-summary"
+            aria-live="polite"
+          >
+            0 items selected
+          </p>
+
+          <fieldset class="bulk-edit-group">
+            <legend>Source categories</legend>
+            <div id="bulk-edit-source-list" class="bulk-edit-source-list"></div>
+            <p class="bulk-edit-help">Leave all unchecked to keep current source categories.</p>
+          </fieldset>
+
+          <label class="bulk-edit-field" for="bulk-edit-room-select">
+            <span>Room</span>
+            <select id="bulk-edit-room-select" name="bulkEditRoom">
+              <option value="">No change</option>
+            </select>
+          </label>
+
+          <label class="bulk-edit-field" for="bulk-edit-check-interval-input">
+            <span>Check interval (days)</span>
+            <input
+              id="bulk-edit-check-interval-input"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              placeholder="No change"
+            />
+          </label>
+
+          <div class="bulk-edit-actions">
+            <button
+              id="bulk-edit-clear-selection-button"
+              class="action-button"
+              type="button"
+              aria-label="Clear bulk selection"
+            >
+              Clear selection
+            </button>
+            <button
+              id="bulk-edit-cancel-button"
+              class="action-button"
+              type="button"
+              aria-label="Exit bulk edit mode"
+            >
+              Cancel
+            </button>
+            <button
+              id="bulk-edit-apply-button"
+              class="action-button primary-button"
+              type="button"
+              aria-label="Apply bulk edits to selected items"
+            >
+              Apply
+            </button>
+          </div>
+        </section>
       </section>
 
       <section id="inventory-view" aria-label="Inventory items">

@@ -35,6 +35,13 @@ export function bindAppEvents({
   onStorageStateChange,
   updateViewportOffsetBottom,
   setAllSourceFilter,
+  setBulkEditMode,
+  toggleBulkItemSelection,
+  clearBulkSelection,
+  setBulkDraftRoom,
+  setBulkDraftCheckInterval,
+  toggleBulkDraftSourceCategory,
+  applyBulkEdits,
   setAllStatusFilter,
   setAllRoomFilter,
   setShoppingSourceFilter,
@@ -46,6 +53,7 @@ export function bindAppEvents({
     allRoomFilterInput,
     statusFilterAllButton,
     statusFilterDueButton,
+    bulkEditToggleButton,
     defaultThresholdInput,
     defaultCheckIntervalInput,
     themeModeInput,
@@ -58,6 +66,12 @@ export function bindAppEvents({
     quickAddForm,
     viewDueItemsButton,
     confirmAllDueButton,
+    bulkEditPanel,
+    bulkEditRoomSelect,
+    bulkEditCheckIntervalInput,
+    bulkEditClearSelectionButton,
+    bulkEditCancelButton,
+    bulkEditApplyButton,
     shoppingSourceFilterInput,
     exportDataButton,
     importDataButton,
@@ -163,12 +177,44 @@ export function bindAppEvents({
     addItemFromQuickForm();
   });
 
+  bulkEditToggleButton.addEventListener("click", () => {
+    setBulkEditMode(!state.bulkEdit.isActive);
+  });
+
   viewDueItemsButton.addEventListener("click", () => {
     setAllStatusFilter("due");
   });
 
   confirmAllDueButton.addEventListener("click", () => {
     confirmAllDueChecks();
+  });
+
+  bulkEditPanel.addEventListener("change", (event) => {
+    const sourceCheckbox = event.target.closest("[data-source-category]");
+    if (sourceCheckbox) {
+      toggleBulkDraftSourceCategory(sourceCheckbox.value, sourceCheckbox.checked);
+      return;
+    }
+  });
+
+  bulkEditRoomSelect.addEventListener("change", (event) => {
+    setBulkDraftRoom(event.target.value);
+  });
+
+  bulkEditCheckIntervalInput.addEventListener("input", (event) => {
+    setBulkDraftCheckInterval(event.target.value);
+  });
+
+  bulkEditClearSelectionButton.addEventListener("click", () => {
+    clearBulkSelection();
+  });
+
+  bulkEditCancelButton.addEventListener("click", () => {
+    setBulkEditMode(false);
+  });
+
+  bulkEditApplyButton.addEventListener("click", () => {
+    applyBulkEdits();
   });
 
   exportDataButton.addEventListener("click", () => {
@@ -223,6 +269,7 @@ export function bindAppEvents({
       state.activeView = view;
       if (view !== "all") {
         state.editingItemId = "";
+        setBulkEditMode(false, { skipRender: true });
       }
       render();
     });
@@ -250,6 +297,11 @@ export function bindAppEvents({
     }
 
     const action = actionTarget.dataset.action;
+
+    if (action === "toggle-select") {
+      toggleBulkItemSelection(itemId);
+      return;
+    }
 
     if (action === "step") {
       const step = Number.parseInt(actionTarget.dataset.step, 10);
