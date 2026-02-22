@@ -66,6 +66,7 @@ test("action controls expose labels and finger-sized tap targets", async ({
   await expectTapTarget(settingsTab);
   await expectTapTarget(page.locator("#status-filter-all"));
   await expectTapTarget(page.locator("#status-filter-due"));
+  await expectTapTarget(page.locator("#bulk-edit-toggle-button"));
 
   const decreaseDishSoap = page.getByRole("button", {
     name: "Decrease Dish Soap",
@@ -168,6 +169,54 @@ test("all view filters by source category and room", async ({ page }) => {
 
   await page.selectOption("#all-room-filter-input", "Bathroom");
   await expect(itemRow(page, "Dish Soap")).toHaveCount(0);
+});
+
+test("bulk edit mode applies source, room, and check interval to selected items", async ({
+  page,
+}) => {
+  await page.locator("#bulk-edit-toggle-button").click();
+  await expect(page.locator("#bulk-edit-panel")).toBeVisible();
+  await expect(page.locator("#quick-add-form")).toBeHidden();
+
+  await itemRow(page, "Dish Soap")
+    .getByRole("button", { name: "Select Dish Soap" })
+    .click();
+  await itemRow(page, "Toothpaste")
+    .getByRole("button", { name: "Select Toothpaste" })
+    .click();
+  await expect(page.locator("#bulk-edit-selection-summary")).toContainText(
+    "2 items selected"
+  );
+
+  await page.locator('#bulk-edit-source-list input[value="Online"]').check();
+  await page.selectOption("#bulk-edit-room-select", "Pantry");
+  await page.fill("#bulk-edit-check-interval-input", "21");
+  await page.locator("#bulk-edit-apply-button").click();
+
+  await expect(page.locator("#undo-message")).toContainText("Updated 2 items");
+  await expect(page.locator("#bulk-edit-panel")).toBeHidden();
+  await expect(page.locator("#quick-add-form")).toBeVisible();
+
+  const state = await page.evaluate((storageKey) => {
+    const raw = window.localStorage.getItem(storageKey);
+    return raw ? JSON.parse(raw) : null;
+  }, STORAGE_KEY);
+  expect(state).not.toBeNull();
+
+  const dishSoap = state.items.find((item) => item.id === "dish-soap");
+  const toothpaste = state.items.find((item) => item.id === "toothpaste");
+  const paperTowels = state.items.find((item) => item.id === "paper-towels");
+
+  expect(dishSoap.room).toBe("Pantry");
+  expect(toothpaste.room).toBe("Pantry");
+  expect(dishSoap.sourceCategories).toEqual(["Online"]);
+  expect(toothpaste.sourceCategories).toEqual(["Online"]);
+  expect(dishSoap.checkIntervalDays).toBe(21);
+  expect(toothpaste.checkIntervalDays).toBe(21);
+
+  expect(paperTowels.room).toBe("Kitchen");
+  expect(paperTowels.sourceCategories).toEqual(["Grocery"]);
+  expect(paperTowels.checkIntervalDays).toBe(14);
 });
 
 test("shopping view groups by source and supports source filtering", async ({

@@ -228,6 +228,8 @@ body {
 .quick-add-form input:focus-visible,
 .filter-field select:focus-visible,
 .status-filter-button:focus-visible,
+.bulk-edit-field select:focus-visible,
+.bulk-edit-field input:focus-visible,
 .qty-input:focus-visible,
 .shopping-buy-input:focus-visible,
 .item-edit-name-input:focus-visible,
@@ -239,6 +241,7 @@ body {
 .shopping-max-button:focus-visible,
 .edit-button:focus-visible,
 .remove-button:focus-visible,
+.bulk-select-button:focus-visible,
 .settings-view input:focus-visible,
 .settings-view select:focus-visible,
 .action-button:focus-visible,
@@ -253,6 +256,14 @@ body {
   margin: 0.65rem 0 0;
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.bulk-toggle-row {
+  margin-top: 0.45rem;
+}
+
+.bulk-toggle-row .action-button {
+  width: 100%;
 }
 
 .check-reminder-panel {
@@ -281,6 +292,98 @@ body {
   font-size: 0.8rem;
 }
 
+.bulk-edit-panel {
+  margin-top: 0.72rem;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: var(--panel);
+  box-shadow: 0 8px 22px #00000012;
+  padding: 0.72rem 0.78rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.bulk-edit-selection-summary {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.bulk-edit-group {
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.bulk-edit-group legend {
+  font-size: 0.79rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 0.34rem;
+}
+
+.bulk-edit-source-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.36rem;
+}
+
+.bulk-edit-source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  padding: 0.2rem 0.56rem;
+  font-size: 0.79rem;
+  font-weight: 600;
+}
+
+.bulk-edit-source-chip input {
+  margin: 0;
+  width: 0.92rem;
+  height: 0.92rem;
+}
+
+.bulk-edit-help {
+  margin: 0.32rem 0 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.bulk-edit-field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.bulk-edit-field span {
+  font-size: 0.79rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.bulk-edit-field select,
+.bulk-edit-field input {
+  width: 100%;
+  min-height: 2.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--panel);
+  color: var(--text);
+  padding: 0 0.68rem;
+  font-size: 0.9rem;
+}
+
+.bulk-edit-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.45rem;
+}
+
 .item-list {
   list-style: none;
   margin: 0.85rem 0 0;
@@ -303,6 +406,11 @@ body {
 .item-row.is-low {
   border-color: #e8d3ac;
   background: var(--low-bg);
+}
+
+.item-row.is-selected {
+  border-color: #c5d7c7;
+  background: #eff8ef;
 }
 
 .item-main {
@@ -409,6 +517,29 @@ body {
   color: var(--danger);
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.bulk-controls {
+  display: inline-grid;
+  grid-template-columns: 1fr;
+  min-width: 7.2rem;
+}
+
+.bulk-select-button {
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--panel);
+  color: var(--text);
+  min-height: 2.9rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bulk-select-button.is-selected {
+  border-color: #c5d7c7;
+  background: #eff8ef;
+  color: #2f6c48;
 }
 
 .qty-input {
@@ -906,6 +1037,7 @@ body {
 .shopping-max-button,
 .edit-button,
 .remove-button,
+.bulk-select-button,
 .undo-button,
 .nav-tab {
   min-width: var(--tap-target);
@@ -948,6 +1080,23 @@ body {
 }
 
 :root[data-theme="dark"] .primary-button {
+  border-color: #4e6f58;
+  background: #203126;
+  color: #b7e8c7;
+}
+
+:root[data-theme="dark"] .bulk-edit-panel {
+  border-color: #4a5650;
+  background: #1b231f;
+}
+
+:root[data-theme="dark"] .bulk-edit-source-chip {
+  border-color: #4a5650;
+  background: #202924;
+}
+
+:root[data-theme="dark"] .bulk-select-button.is-selected,
+:root[data-theme="dark"] .item-row.is-selected {
   border-color: #4e6f58;
   background: #203126;
   color: #b7e8c7;
@@ -1071,6 +1220,14 @@ body {
 
   .check-reminder-actions {
     grid-template-columns: 1fr;
+  }
+
+  .bulk-edit-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .bulk-controls {
+    min-width: 0;
   }
 
   .shopping-filter-field {

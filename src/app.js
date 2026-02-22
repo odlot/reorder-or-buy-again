@@ -75,6 +75,7 @@ const {
   allRoomFilterInput,
   statusFilterAllButton,
   statusFilterDueButton,
+  bulkEditToggleButton,
   quickAddForm,
   quickAddNameInput,
   checkReminderChip,
@@ -95,6 +96,13 @@ const {
   shareShoppingButton,
   applyPurchasedButton,
   emptyState,
+  bulkEditPanel,
+  bulkEditSelectionSummary,
+  bulkEditSourceList,
+  bulkEditRoomSelect,
+  bulkEditCheckIntervalInput,
+  bulkEditClearSelectionButton,
+  bulkEditApplyButton,
   shoppingEmptyState,
   navTabs,
   shoppingBadge,
@@ -130,6 +138,15 @@ const state = {
   },
   activeView: VIEWS.ALL,
   editingItemId: "",
+  bulkEdit: {
+    isActive: false,
+    selectedItemIds: [],
+    draft: {
+      sourceCategories: [],
+      room: "",
+      checkIntervalDays: "",
+    },
+  },
   toast: {
     text: "",
     tone: "",
@@ -239,6 +256,41 @@ function getSourceCategoryOptions() {
 function getRoomOptions() {
   const roomsFromItems = state.items.map((item) => normalizeRoom(item.room));
   return mergeLabels([UNASSIGNED_PRESET], state.settings.roomPresets, roomsFromItems);
+}
+
+function createDefaultBulkDraft() {
+  return {
+    sourceCategories: [],
+    room: "",
+    checkIntervalDays: "",
+  };
+}
+
+function resetBulkEditState() {
+  state.bulkEdit = {
+    isActive: false,
+    selectedItemIds: [],
+    draft: createDefaultBulkDraft(),
+  };
+}
+
+function setBulkSelection(ids) {
+  const seen = new Set();
+  const selected = [];
+  for (const rawId of ids || []) {
+    const itemId = String(rawId || "").trim();
+    if (!itemId || seen.has(itemId)) {
+      continue;
+    }
+    seen.add(itemId);
+    selected.push(itemId);
+  }
+  state.bulkEdit.selectedItemIds = selected;
+}
+
+function getExistingBulkSelection() {
+  const existingIds = new Set(state.items.map((item) => item.id));
+  return state.bulkEdit.selectedItemIds.filter((itemId) => existingIds.has(itemId));
 }
 
 function itemMatchesSourceCategory(item, sourceCategoryFilterValue) {
@@ -386,6 +438,110 @@ function renderStatusFilterControls(overdueCount) {
 
   statusFilterDueButton.classList.toggle("is-active", !allActive);
   statusFilterDueButton.setAttribute("aria-pressed", allActive ? "false" : "true");
+}
+
+function renderBulkSourceDraftOptions(sourceCategoryOptions) {
+  if (!bulkEditSourceList) {
+    return;
+  }
+
+  bulkEditSourceList.replaceChildren();
+  const draftSourceCategoryKeys = new Set(
+    state.bulkEdit.draft.sourceCategories.map((value) =>
+      normalizeLabel(value).toLocaleLowerCase()
+    )
+  );
+
+  for (const sourceCategory of sourceCategoryOptions) {
+    const optionKey = sourceCategory.toLocaleLowerCase();
+    const optionId = `bulk-source-${encodeURIComponent(optionKey)}`;
+    const chip = document.createElement("label");
+    chip.className = "bulk-edit-source-chip";
+    chip.setAttribute("for", optionId);
+
+    const input = document.createElement("input");
+    input.id = optionId;
+    input.type = "checkbox";
+    input.value = sourceCategory;
+    input.dataset.sourceCategory = sourceCategory;
+    input.checked = draftSourceCategoryKeys.has(optionKey);
+
+    const text = document.createElement("span");
+    text.textContent = sourceCategory;
+
+    chip.append(input, text);
+    bulkEditSourceList.appendChild(chip);
+  }
+}
+
+function renderBulkEditPanel({
+  isSettings = false,
+  isShopping = false,
+  visibleItems = [],
+  sourceCategoryOptions = [],
+  roomOptions = [],
+} = {}) {
+  const canShowBulkPanel = !isSettings && !isShopping;
+  if (!canShowBulkPanel) {
+    bulkEditPanel.classList.add("hidden");
+    if (bulkEditToggleButton) {
+      bulkEditToggleButton.classList.add("hidden");
+    }
+    return;
+  }
+
+  if (bulkEditToggleButton) {
+    bulkEditToggleButton.classList.remove("hidden");
+  }
+
+  const visibleIdSet = new Set(visibleItems.map((item) => item.id));
+  const selectedVisibleIds = getExistingBulkSelection().filter((itemId) =>
+    visibleIdSet.has(itemId)
+  );
+  setBulkSelection(selectedVisibleIds);
+  const selectedCount = selectedVisibleIds.length;
+
+  if (!state.bulkEdit.isActive) {
+    bulkEditPanel.classList.add("hidden");
+    if (bulkEditToggleButton) {
+      bulkEditToggleButton.textContent = "Bulk edit";
+      bulkEditToggleButton.setAttribute("aria-pressed", "false");
+    }
+    return;
+  }
+
+  if (bulkEditToggleButton) {
+    bulkEditToggleButton.textContent = "Exit bulk edit";
+    bulkEditToggleButton.setAttribute("aria-pressed", "true");
+  }
+
+  bulkEditPanel.classList.remove("hidden");
+  const itemNoun = selectedCount === 1 ? "item" : "items";
+  bulkEditSelectionSummary.textContent = `${selectedCount} ${itemNoun} selected`;
+
+  renderBulkSourceDraftOptions(sourceCategoryOptions);
+
+  if (bulkEditRoomSelect) {
+    const options = [""];
+    options.push(...roomOptions);
+    bulkEditRoomSelect.replaceChildren();
+    for (const roomOption of options) {
+      const optionNode = document.createElement("option");
+      optionNode.value = roomOption;
+      optionNode.textContent = roomOption || "No change";
+      bulkEditRoomSelect.appendChild(optionNode);
+    }
+    bulkEditRoomSelect.value = state.bulkEdit.draft.room;
+  }
+
+  bulkEditCheckIntervalInput.value = state.bulkEdit.draft.checkIntervalDays;
+
+  const hasDraftChanges =
+    state.bulkEdit.draft.sourceCategories.length > 0 ||
+    Boolean(normalizeLabel(state.bulkEdit.draft.room)) ||
+    Boolean(normalizeLabel(state.bulkEdit.draft.checkIntervalDays));
+  bulkEditApplyButton.disabled = selectedCount === 0 || !hasDraftChanges;
+  bulkEditClearSelectionButton.disabled = selectedCount === 0;
 }
 
 function getNeededQuantity(item) {
@@ -628,6 +784,7 @@ function adoptSnapshot(snapshot, { persist = true } = {}) {
   clearPendingDelete();
   clearToast();
   state.editingItemId = "";
+  resetBulkEditState();
   state.items = snapshot.items;
   state.settings = snapshot.settings;
   state.shopping = snapshot.shopping;
@@ -1037,8 +1194,15 @@ function renderCheckReminderState(overdueItems, nowTimestamp = Date.now()) {
   );
 }
 
-function renderInventoryPanel(visibleItems, lowCount, overdueCount) {
-  if (!state.items.some((item) => item.id === state.editingItemId)) {
+function renderInventoryPanel(
+  visibleItems,
+  lowCount,
+  overdueCount,
+  sourceCategoryOptions,
+  roomOptions
+) {
+  const hasBulkEdit = state.bulkEdit.isActive;
+  if (!state.items.some((item) => item.id === state.editingItemId) || hasBulkEdit) {
     state.editingItemId = "";
   }
   if (
@@ -1051,8 +1215,10 @@ function renderInventoryPanel(visibleItems, lowCount, overdueCount) {
   renderList(itemList, visibleItems, {
     editingItemId: state.editingItemId,
     defaultCheckIntervalDays: state.settings.defaultCheckIntervalDays,
-    sourceCategoryOptions: getSourceCategoryOptions(),
-    roomOptions: getRoomOptions(),
+    sourceCategoryOptions,
+    roomOptions,
+    bulkMode: hasBulkEdit,
+    selectedItemIds: new Set(state.bulkEdit.selectedItemIds),
   });
   renderSummary(summaryLine, state.items.length, lowCount, overdueCount);
 
@@ -1065,7 +1231,8 @@ function renderInventoryPanel(visibleItems, lowCount, overdueCount) {
     Boolean(state.query.trim()) ||
     Boolean(state.filters.allSourceCategory) ||
     Boolean(state.filters.allRoom) ||
-    state.filters.allStatus === "due";
+    state.filters.allStatus === "due" ||
+    hasBulkEdit;
   emptyState.textContent = hasFilter
     ? "No items match your filters."
     : "No items yet. Add one above.";
@@ -1110,6 +1277,8 @@ function render() {
   const nowTimestamp = Date.now();
   const isSettings = state.activeView === VIEWS.SETTINGS;
   const isShopping = state.activeView === VIEWS.SHOPPING;
+  const sourceCategoryOptions = getSourceCategoryOptions();
+  const roomOptions = getRoomOptions();
   renderFilterControls();
   const overdueItems = getOverdueCheckItems(nowTimestamp);
   renderStatusFilterControls(overdueItems.length);
@@ -1121,6 +1290,15 @@ function render() {
   inventoryView.classList.toggle("hidden", isSettings || isShopping);
   shoppingView.classList.toggle("hidden", !isShopping);
   settingsView.classList.toggle("hidden", !isSettings);
+  quickAddForm.classList.toggle("hidden", isSettings || isShopping || state.bulkEdit.isActive);
+
+  renderBulkEditPanel({
+    isSettings,
+    isShopping,
+    visibleItems,
+    sourceCategoryOptions,
+    roomOptions,
+  });
 
   navTabs.forEach((tab) => {
     const isActive = tab.dataset.view === state.activeView;
@@ -1164,7 +1342,13 @@ function render() {
     return;
   }
 
-  renderInventoryPanel(visibleItems, lowCount, overdueItems.length);
+  renderInventoryPanel(
+    visibleItems,
+    lowCount,
+    overdueItems.length,
+    sourceCategoryOptions,
+    roomOptions
+  );
 }
 
 function persistAndRender({ touchUpdatedAt = true, queueSync = true } = {}) {
@@ -1338,6 +1522,170 @@ function saveItemEdits(itemId, input) {
 function setAllSourceFilter(value) {
   state.filters.allSourceCategory = normalizeLabel(value);
   render();
+}
+
+function setBulkEditMode(nextActive, { skipRender = false } = {}) {
+  const shouldEnable = Boolean(nextActive);
+  if (shouldEnable) {
+    state.editingItemId = "";
+    state.bulkEdit.isActive = true;
+    setBulkSelection([]);
+    state.bulkEdit.draft = createDefaultBulkDraft();
+  } else {
+    resetBulkEditState();
+  }
+
+  if (!skipRender) {
+    render();
+  }
+}
+
+function toggleBulkItemSelection(itemId) {
+  if (!state.bulkEdit.isActive) {
+    return;
+  }
+
+  const nextSelection = new Set(getExistingBulkSelection());
+  if (nextSelection.has(itemId)) {
+    nextSelection.delete(itemId);
+  } else {
+    nextSelection.add(itemId);
+  }
+
+  setBulkSelection(Array.from(nextSelection));
+  render();
+}
+
+function clearBulkSelection() {
+  if (!state.bulkEdit.isActive) {
+    return;
+  }
+
+  setBulkSelection([]);
+  render();
+}
+
+function setBulkDraftRoom(value) {
+  if (!state.bulkEdit.isActive) {
+    return;
+  }
+
+  state.bulkEdit.draft.room = normalizeLabel(value);
+  render();
+}
+
+function setBulkDraftCheckInterval(value) {
+  if (!state.bulkEdit.isActive) {
+    return;
+  }
+
+  state.bulkEdit.draft.checkIntervalDays = normalizeLabel(value);
+  render();
+}
+
+function toggleBulkDraftSourceCategory(value, checked) {
+  if (!state.bulkEdit.isActive) {
+    return;
+  }
+
+  const label = normalizeLabel(value);
+  if (!label) {
+    return;
+  }
+
+  const selected = mergeLabels(state.bulkEdit.draft.sourceCategories);
+  const nextSourceCategories = checked
+    ? [...selected, label]
+    : selected.filter((sourceCategory) => !labelsEqual(sourceCategory, label));
+  state.bulkEdit.draft.sourceCategories = mergeLabels(nextSourceCategories);
+  render();
+}
+
+function applyBulkEdits() {
+  if (!state.bulkEdit.isActive) {
+    return;
+  }
+
+  const selectedIds = getExistingBulkSelection();
+  if (selectedIds.length === 0) {
+    showToast("Select at least one item for bulk edit.", "error");
+    render();
+    return;
+  }
+
+  const hasSourceCategories = state.bulkEdit.draft.sourceCategories.length > 0;
+  const hasRoom = Boolean(normalizeLabel(state.bulkEdit.draft.room));
+  const rawInterval = normalizeLabel(state.bulkEdit.draft.checkIntervalDays);
+  const hasInterval = rawInterval.length > 0;
+  if (!hasSourceCategories && !hasRoom && !hasInterval) {
+    showToast("Pick at least one bulk change before applying.", "error");
+    render();
+    return;
+  }
+
+  let nextCheckIntervalDays = 0;
+  if (hasInterval) {
+    if (!/^\d+$/.test(rawInterval)) {
+      showToast("Check interval must be a whole number.", "error");
+      render();
+      return;
+    }
+    nextCheckIntervalDays = Math.max(1, clampQuantity(rawInterval));
+  }
+
+  const selectedIdSet = new Set(selectedIds);
+  const sourceCategories = hasSourceCategories
+    ? normalizeSourceCategories(state.bulkEdit.draft.sourceCategories)
+    : [];
+  const room = hasRoom ? normalizeRoom(state.bulkEdit.draft.room) : "";
+  let updatedCount = 0;
+  state.items = state.items.map((item) => {
+    if (!selectedIdSet.has(item.id)) {
+      return item;
+    }
+
+    const nextItem = {
+      ...item,
+      ...(hasSourceCategories ? { sourceCategories } : {}),
+      ...(hasRoom ? { room } : {}),
+      ...(hasInterval ? { checkIntervalDays: nextCheckIntervalDays } : {}),
+    };
+    const changed =
+      (hasSourceCategories &&
+        (item.sourceCategories.length !== nextItem.sourceCategories.length ||
+          item.sourceCategories.some((sourceCategory, index) => {
+            return !labelsEqual(sourceCategory, nextItem.sourceCategories[index]);
+          }))) ||
+      (hasRoom && !labelsEqual(item.room, nextItem.room)) ||
+      (hasInterval && item.checkIntervalDays !== nextItem.checkIntervalDays);
+    if (changed) {
+      updatedCount += 1;
+    }
+    return nextItem;
+  });
+
+  if (updatedCount === 0) {
+    showToast("Selected items already match those values.", "error");
+    render();
+    return;
+  }
+
+  const changedParts = [];
+  if (hasSourceCategories) {
+    changedParts.push("source categories");
+  }
+  if (hasRoom) {
+    changedParts.push("room");
+  }
+  if (hasInterval) {
+    changedParts.push("check interval");
+  }
+
+  const itemNoun = updatedCount === 1 ? "item" : "items";
+  showToast(`Updated ${updatedCount} ${itemNoun}: ${changedParts.join(", ")}.`, "success");
+  setSettingsNotice("", "");
+  resetBulkEditState();
+  persistAndRender({ touchUpdatedAt: true });
 }
 
 function setAllStatusFilter(value) {
@@ -1749,6 +2097,9 @@ function deleteItemById(itemId) {
 
   scheduleUndo(snapshot, index);
   state.items = removeItem(state.items, itemId);
+  setBulkSelection(
+    state.bulkEdit.selectedItemIds.filter((selectedItemId) => selectedItemId !== itemId)
+  );
   if (state.editingItemId === itemId) {
     state.editingItemId = "";
   }
@@ -1815,6 +2166,7 @@ async function importBackupFile(file) {
 
     clearPendingDelete();
     state.editingItemId = "";
+    resetBulkEditState();
     state.items = imported.items;
     state.settings = imported.settings;
     state.shopping = imported.shopping;
@@ -1841,6 +2193,7 @@ function resetLocalData() {
   const defaults = createDefaultState();
   clearPendingDelete();
   state.editingItemId = "";
+  resetBulkEditState();
   state.items = defaults.items;
   state.settings = defaults.settings;
   state.shopping = defaults.shopping;
@@ -1930,6 +2283,13 @@ bindAppEvents({
   onStorageStateChange: handleStorageStateChange,
   updateViewportOffsetBottom,
   setAllSourceFilter,
+  setBulkEditMode,
+  toggleBulkItemSelection,
+  clearBulkSelection,
+  setBulkDraftRoom,
+  setBulkDraftCheckInterval,
+  toggleBulkDraftSourceCategory,
+  applyBulkEdits,
   setAllStatusFilter,
   setAllRoomFilter,
   setShoppingSourceFilter,

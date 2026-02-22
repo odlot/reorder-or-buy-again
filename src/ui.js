@@ -90,9 +90,13 @@ export function renderList(
     defaultCheckIntervalDays = 14,
     sourceCategoryOptions = [],
     roomOptions = [],
+    bulkMode = false,
+    selectedItemIds = new Set(),
   } = {}
 ) {
   const nowTimestamp = Date.now();
+  const selectedIdSet =
+    selectedItemIds instanceof Set ? selectedItemIds : new Set(selectedItemIds);
 
   const formatFreshnessText = (item) => {
     const baselineTimestamp = getCheckBaselineTimestamp(item);
@@ -136,6 +140,8 @@ export function renderList(
       const freshness = formatFreshnessText(item);
       const safeFreshness = escapeHtml(freshness.text);
       const itemSourceCategories = normalizeSourceCategories(item.sourceCategories);
+      const isSelected = selectedIdSet.has(item.id);
+      const showSelected = bulkMode && isSelected;
       const sourceCategoryOptionsForItem = mergeOptionValues(
         [UNASSIGNED_PRESET],
         sourceCategoryOptions,
@@ -185,8 +191,51 @@ export function renderList(
         })
         .join("");
 
+      const controlsMarkup =
+        bulkMode && !isEditing
+          ? `
+            <div class="controls bulk-controls">
+              <button
+                class="bulk-select-button ${isSelected ? "is-selected" : ""}"
+                type="button"
+                data-action="toggle-select"
+                aria-pressed="${isSelected ? "true" : "false"}"
+                aria-label="${isSelected ? "Deselect" : "Select"} ${safeName}"
+              >
+                ${isSelected ? "Selected" : "Select"}
+              </button>
+            </div>
+          `
+          : `
+            <div class="controls">
+              <button class="step-button" type="button" data-action="step" data-step="-1" aria-label="Decrease ${safeName}">
+                -
+              </button>
+              <input
+                class="qty-input"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                value="${item.quantity}"
+                aria-label="Quantity for ${safeName}"
+              />
+              <button class="step-button" type="button" data-action="step" data-step="1" aria-label="Increase ${safeName}">
+                +
+              </button>
+              <button class="confirm-button" type="button" data-action="confirm-check" aria-label="Confirm quantity for ${safeName}">
+                Check
+              </button>
+              <button class="edit-button ${isEditing ? "hidden" : ""}" type="button" data-action="edit" aria-label="Edit ${safeName}">
+                Edit
+              </button>
+              <button class="remove-button" type="button" data-action="delete" aria-label="Remove ${safeName}">
+                Del
+              </button>
+            </div>
+          `;
+
       return `
-        <li class="item-row ${low ? "is-low" : ""}" data-item-id="${safeItemId}">
+        <li class="item-row ${low ? "is-low" : ""} ${showSelected ? "is-selected" : ""}" data-item-id="${safeItemId}">
           <div class="item-main">
             ${
               isEditing
@@ -278,31 +327,7 @@ export function renderList(
             `
             }
           </div>
-          <div class="controls">
-            <button class="step-button" type="button" data-action="step" data-step="-1" aria-label="Decrease ${safeName}">
-              -
-            </button>
-            <input
-              class="qty-input"
-              type="text"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              value="${item.quantity}"
-              aria-label="Quantity for ${safeName}"
-            />
-            <button class="step-button" type="button" data-action="step" data-step="1" aria-label="Increase ${safeName}">
-              +
-            </button>
-            <button class="confirm-button" type="button" data-action="confirm-check" aria-label="Confirm quantity for ${safeName}">
-              Check
-            </button>
-            <button class="edit-button ${isEditing ? "hidden" : ""}" type="button" data-action="edit" aria-label="Edit ${safeName}">
-              Edit
-            </button>
-            <button class="remove-button" type="button" data-action="delete" aria-label="Remove ${safeName}">
-              Del
-            </button>
-          </div>
+          ${controlsMarkup}
         </li>
       `;
     })
