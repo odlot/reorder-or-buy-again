@@ -406,6 +406,49 @@ export function renderShoppingList(
   container.innerHTML = markup;
 }
 
+export function renderAuditList(
+  container,
+  items,
+  { defaultCheckIntervalDays = 14 } = {}
+) {
+  const nowTimestamp = Date.now();
+  const markup = items
+    .map((item) => {
+      const safeName = escapeHtml(item.name);
+      const safeItemId = encodeURIComponent(item.id);
+      const safeRoom = escapeHtml(normalizeLabel(item.room) || UNASSIGNED_PRESET);
+      const nextCheckTimestamp = getNextCheckTimestamp(item, defaultCheckIntervalDays);
+      const overdueDays = Math.max(
+        0,
+        Math.floor((nowTimestamp - nextCheckTimestamp) / DAY_MS)
+      );
+      const dueLabel = overdueDays === 0 ? "Due today" : `${overdueDays}d overdue`;
+
+      return `
+        <li class="audit-row" data-item-id="${safeItemId}">
+          <p class="audit-name">${safeName}</p>
+          <p class="audit-meta">
+            Room: ${safeRoom} • Qty: ${item.quantity} • Target: ${item.targetQuantity}
+          </p>
+          <p class="audit-due">${dueLabel}</p>
+          <div class="audit-controls">
+            <button
+              class="action-button primary-button"
+              type="button"
+              data-action="audit-confirm-check"
+              aria-label="Confirm quantity for ${safeName}"
+            >
+              Confirm
+            </button>
+          </div>
+        </li>
+      `;
+    })
+    .join("");
+
+  container.innerHTML = markup;
+}
+
 export function renderSummary(target, totalItems, lowItems, dueItems = 0) {
   target.textContent = `${totalItems} items • ${lowItems} low stock • ${dueItems} due checks`;
 }
