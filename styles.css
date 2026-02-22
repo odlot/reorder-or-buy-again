@@ -141,6 +141,36 @@ body {
   gap: 0.45rem;
 }
 
+.status-filter-group {
+  margin-top: 0.45rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.status-filter-button {
+  min-height: var(--tap-target);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0 0.55rem;
+  cursor: pointer;
+}
+
+.status-filter-button.is-active {
+  border-color: #c5d7c7;
+  background: #eff8ef;
+  color: #2f6c48;
+}
+
+.status-filter-button:disabled {
+  opacity: 0.58;
+  cursor: default;
+}
+
 .filter-field {
   display: grid;
   gap: 0.25rem;
@@ -197,6 +227,7 @@ body {
 .search-wrap input:focus-visible,
 .quick-add-form input:focus-visible,
 .filter-field select:focus-visible,
+.status-filter-button:focus-visible,
 .qty-input:focus-visible,
 .shopping-buy-input:focus-visible,
 .item-edit-name-input:focus-visible,
@@ -237,6 +268,17 @@ body {
   color: var(--low-text);
   font-size: 0.84rem;
   font-weight: 600;
+}
+
+.check-reminder-actions {
+  margin-top: 0.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.check-reminder-actions .action-button {
+  font-size: 0.8rem;
 }
 
 .item-list {
@@ -911,6 +953,12 @@ body {
   color: #b7e8c7;
 }
 
+:root[data-theme="dark"] .status-filter-button.is-active {
+  border-color: #4e6f58;
+  background: #203126;
+  color: #b7e8c7;
+}
+
 :root[data-theme="dark"] .undo-button {
   border-color: #4e6f58;
   background: #203126;
@@ -1014,6 +1062,14 @@ body {
   }
 
   .filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .status-filter-group {
+    grid-template-columns: 1fr;
+  }
+
+  .check-reminder-actions {
     grid-template-columns: 1fr;
   }
 
