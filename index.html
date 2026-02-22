@@ -44,9 +44,45 @@
             </select>
           </label>
         </div>
+        <div class="status-filter-group" role="group" aria-label="Inventory status filter">
+          <button
+            id="status-filter-all"
+            class="status-filter-button is-active"
+            type="button"
+            aria-pressed="true"
+          >
+            All items
+          </button>
+          <button
+            id="status-filter-due"
+            class="status-filter-button"
+            type="button"
+            aria-pressed="false"
+          >
+            Due checks (0)
+          </button>
+        </div>
         <p id="summary-line" class="summary-line" aria-live="polite"></p>
         <section id="check-reminder-panel" class="check-reminder-panel hidden">
           <p id="check-reminder-text" class="check-reminder-text" aria-live="polite"></p>
+          <div class="check-reminder-actions">
+            <button
+              id="view-due-items-button"
+              class="action-button"
+              type="button"
+              aria-label="Show due items in all view"
+            >
+              View due
+            </button>
+            <button
+              id="confirm-all-due-button"
+              class="action-button primary-button"
+              type="button"
+              aria-label="Confirm all due item quantities"
+            >
+              Confirm all due
+            </button>
+          </div>
         </section>
 
         <form id="quick-add-form" class="quick-add-form" aria-label="Quick add item">

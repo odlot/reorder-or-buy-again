@@ -64,6 +64,8 @@ test("action controls expose labels and finger-sized tap targets", async ({
   await expectTapTarget(allTab);
   await expectTapTarget(shoppingTab);
   await expectTapTarget(settingsTab);
+  await expectTapTarget(page.locator("#status-filter-all"));
+  await expectTapTarget(page.locator("#status-filter-due"));
 
   const decreaseDishSoap = page.getByRole("button", {
     name: "Decrease Dish Soap",
@@ -352,6 +354,88 @@ test("overdue reminder appears and confirm quantity clears it", async ({ page })
     "Confirmed Dish Soap quantity."
   );
   await expect(page.locator("#check-reminder-panel")).toBeHidden();
+});
+
+test("due-only filter and confirm-all action clear all due reminders", async ({
+  page,
+}) => {
+  await page.evaluate((storageKey) => {
+    const now = Date.now();
+    const staleTimestamp = new Date(now - 40 * 24 * 60 * 60 * 1000).toISOString();
+    const alsoStaleTimestamp = new Date(now - 20 * 24 * 60 * 60 * 1000).toISOString();
+    const freshTimestamp = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        items: [
+          {
+            id: "dish-soap",
+            name: "Dish Soap",
+            quantity: 1,
+            lowThreshold: 1,
+            targetQuantity: 2,
+            sourceCategories: ["Grocery"],
+            room: "Kitchen",
+            checkIntervalDays: 14,
+            lastCheckedAt: staleTimestamp,
+            updatedAt: staleTimestamp,
+          },
+          {
+            id: "toothpaste",
+            name: "Toothpaste",
+            quantity: 2,
+            lowThreshold: 1,
+            targetQuantity: 3,
+            sourceCategories: ["Pharmacy"],
+            room: "Bathroom",
+            checkIntervalDays: 14,
+            lastCheckedAt: alsoStaleTimestamp,
+            updatedAt: alsoStaleTimestamp,
+          },
+          {
+            id: "paper-towels",
+            name: "Paper Towels",
+            quantity: 2,
+            lowThreshold: 1,
+            targetQuantity: 3,
+            sourceCategories: ["Grocery"],
+            room: "Kitchen",
+            checkIntervalDays: 14,
+            lastCheckedAt: freshTimestamp,
+            updatedAt: freshTimestamp,
+          },
+        ],
+        settings: {
+          defaultLowThreshold: 1,
+          themeMode: "light",
+          defaultCheckIntervalDays: 14,
+          sourceCategoryPresets: ["Grocery", "Pharmacy"],
+          roomPresets: ["Kitchen", "Bathroom"],
+        },
+        shopping: {
+          buyQuantityByItemId: {},
+        },
+        updatedAt: new Date(now).toISOString(),
+        revision: 1,
+      })
+    );
+  }, STORAGE_KEY);
+
+  await page.reload();
+
+  await expect(page.locator("#status-filter-due")).toHaveText("Due checks (2)");
+  await page.locator("#status-filter-due").click();
+  await expect(itemRow(page, "Dish Soap")).toHaveCount(1);
+  await expect(itemRow(page, "Toothpaste")).toHaveCount(1);
+  await expect(itemRow(page, "Paper Towels")).toHaveCount(0);
+
+  await page.locator("#confirm-all-due-button").click();
+  await expect(page.locator("#undo-message")).toContainText("Confirmed 2 due items.");
+  await expect(page.locator("#check-reminder-panel")).toBeHidden();
+  await expect(page.locator("#status-filter-all")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#status-filter-due")).toHaveText("Due checks (0)");
+  await expect(page.locator("#status-filter-due")).toBeDisabled();
 });
 
 test("plus/minus controls update quantity", async ({ page }) => {

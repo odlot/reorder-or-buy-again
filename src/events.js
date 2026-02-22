@@ -35,13 +35,17 @@ export function bindAppEvents({
   onStorageStateChange,
   updateViewportOffsetBottom,
   setAllSourceFilter,
+  setAllStatusFilter,
   setAllRoomFilter,
   setShoppingSourceFilter,
+  confirmAllDueChecks,
 }) {
   const {
     searchInput,
     allSourceFilterInput,
     allRoomFilterInput,
+    statusFilterAllButton,
+    statusFilterDueButton,
     defaultThresholdInput,
     defaultCheckIntervalInput,
     themeModeInput,
@@ -52,6 +56,8 @@ export function bindAppEvents({
     roomPresetInput,
     roomPresetList,
     quickAddForm,
+    viewDueItemsButton,
+    confirmAllDueButton,
     shoppingSourceFilterInput,
     exportDataButton,
     importDataButton,
@@ -76,6 +82,14 @@ export function bindAppEvents({
 
   allSourceFilterInput.addEventListener("change", (event) => {
     setAllSourceFilter(event.target.value);
+  });
+
+  statusFilterAllButton.addEventListener("click", () => {
+    setAllStatusFilter("all");
+  });
+
+  statusFilterDueButton.addEventListener("click", () => {
+    setAllStatusFilter("due");
   });
 
   allRoomFilterInput.addEventListener("change", (event) => {
@@ -147,6 +161,14 @@ export function bindAppEvents({
   quickAddForm.addEventListener("submit", (event) => {
     event.preventDefault();
     addItemFromQuickForm();
+  });
+
+  viewDueItemsButton.addEventListener("click", () => {
+    setAllStatusFilter("due");
+  });
+
+  confirmAllDueButton.addEventListener("click", () => {
+    confirmAllDueChecks();
   });
 
   exportDataButton.addEventListener("click", () => {

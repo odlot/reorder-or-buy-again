@@ -73,11 +73,14 @@ const {
   searchInput,
   allSourceFilterInput,
   allRoomFilterInput,
+  statusFilterAllButton,
+  statusFilterDueButton,
   quickAddForm,
   quickAddNameInput,
   checkReminderChip,
   checkReminderPanel,
   checkReminderText,
+  confirmAllDueButton,
   syncStatusChip,
   listToolbar,
   inventoryView,
@@ -122,6 +125,7 @@ const state = {
   filters: {
     allSourceCategory: "",
     allRoom: "",
+    allStatus: "all",
     shoppingSourceCategory: "",
   },
   activeView: VIEWS.ALL,
@@ -263,9 +267,13 @@ function getPrimarySourceCategory(item) {
   return sourceCategories[0] || UNASSIGNED_PRESET;
 }
 
-function getVisibleItems() {
+function getVisibleItems(nowTimestamp = Date.now()) {
   return selectVisibleItems(state.items, state.query, false).filter((item) => {
+    const matchesStatus =
+      state.filters.allStatus !== "due" ||
+      isCheckOverdue(item, nowTimestamp, state.settings.defaultCheckIntervalDays);
     return (
+      matchesStatus &&
       itemMatchesSourceCategory(item, state.filters.allSourceCategory) &&
       itemMatchesRoom(item, state.filters.allRoom)
     );
@@ -357,6 +365,27 @@ function renderFilterControls() {
     "All sources",
     state.filters.shoppingSourceCategory
   );
+}
+
+function renderStatusFilterControls(overdueCount) {
+  if (!statusFilterAllButton || !statusFilterDueButton) {
+    return;
+  }
+
+  if (state.filters.allStatus === "due" && overdueCount === 0) {
+    state.filters.allStatus = "all";
+  }
+
+  const dueLabel = overdueCount === 1 ? "Due check (1)" : `Due checks (${overdueCount})`;
+  statusFilterDueButton.textContent = dueLabel;
+  statusFilterDueButton.disabled = overdueCount === 0;
+
+  const allActive = state.filters.allStatus !== "due";
+  statusFilterAllButton.classList.toggle("is-active", allActive);
+  statusFilterAllButton.setAttribute("aria-pressed", allActive ? "true" : "false");
+
+  statusFilterDueButton.classList.toggle("is-active", !allActive);
+  statusFilterDueButton.setAttribute("aria-pressed", allActive ? "false" : "true");
 }
 
 function getNeededQuantity(item) {
@@ -969,12 +998,15 @@ function getOverdueCheckItems(nowTimestamp = Date.now()) {
     });
 }
 
-function renderCheckReminderState(nowTimestamp = Date.now()) {
-  const overdueItems = getOverdueCheckItems(nowTimestamp);
+function renderCheckReminderState(overdueItems, nowTimestamp = Date.now()) {
   if (overdueItems.length === 0) {
     checkReminderChip.classList.add("hidden");
     checkReminderPanel.classList.add("hidden");
     checkReminderText.textContent = "";
+    if (confirmAllDueButton) {
+      confirmAllDueButton.disabled = true;
+      confirmAllDueButton.textContent = "Confirm all due";
+    }
     return;
   }
 
@@ -994,13 +1026,18 @@ function renderCheckReminderState(nowTimestamp = Date.now()) {
   const overdueLabel =
     oldestDaysOverdue === 0 ? "due today" : `${oldestDaysOverdue}d overdue`;
   checkReminderText.textContent = `${overdueItems.length} items need quantity confirmation. Oldest: ${mostOverdueItem.name} (${overdueLabel}).`;
+  if (confirmAllDueButton) {
+    const itemNoun = overdueItems.length === 1 ? "item" : "items";
+    confirmAllDueButton.disabled = false;
+    confirmAllDueButton.textContent = `Confirm all due (${overdueItems.length} ${itemNoun})`;
+  }
   checkReminderPanel.classList.toggle(
     "hidden",
     state.activeView !== VIEWS.ALL || overdueItems.length === 0
   );
 }
 
-function renderInventoryPanel(visibleItems, lowCount) {
+function renderInventoryPanel(visibleItems, lowCount, overdueCount) {
   if (!state.items.some((item) => item.id === state.editingItemId)) {
     state.editingItemId = "";
   }
@@ -1017,7 +1054,7 @@ function renderInventoryPanel(visibleItems, lowCount) {
     sourceCategoryOptions: getSourceCategoryOptions(),
     roomOptions: getRoomOptions(),
   });
-  renderSummary(summaryLine, state.items.length, lowCount);
+  renderSummary(summaryLine, state.items.length, lowCount, overdueCount);
 
   if (visibleItems.length > 0) {
     toggleEmptyState(emptyState, false);
@@ -1027,7 +1064,8 @@ function renderInventoryPanel(visibleItems, lowCount) {
   const hasFilter =
     Boolean(state.query.trim()) ||
     Boolean(state.filters.allSourceCategory) ||
-    Boolean(state.filters.allRoom);
+    Boolean(state.filters.allRoom) ||
+    state.filters.allStatus === "due";
   emptyState.textContent = hasFilter
     ? "No items match your filters."
     : "No items yet. Add one above.";
@@ -1069,10 +1107,13 @@ function renderShoppingPanel() {
 }
 
 function render() {
+  const nowTimestamp = Date.now();
   const isSettings = state.activeView === VIEWS.SETTINGS;
   const isShopping = state.activeView === VIEWS.SHOPPING;
   renderFilterControls();
-  const visibleItems = getVisibleItems();
+  const overdueItems = getOverdueCheckItems(nowTimestamp);
+  renderStatusFilterControls(overdueItems.length);
+  const visibleItems = getVisibleItems(nowTimestamp);
   const lowCount = state.items.filter(isLowStock).length;
   applyThemeMode(state.settings.themeMode);
 
@@ -1093,7 +1134,7 @@ function render() {
 
   shoppingBadge.textContent = lowCount > 99 ? "99+" : String(lowCount);
   shoppingBadge.classList.toggle("hidden", lowCount === 0);
-  renderCheckReminderState();
+  renderCheckReminderState(overdueItems, nowTimestamp);
   renderSyncStatus();
 
   const hasUndo = Boolean(state.pendingDelete);
@@ -1123,7 +1164,7 @@ function render() {
     return;
   }
 
-  renderInventoryPanel(visibleItems, lowCount);
+  renderInventoryPanel(visibleItems, lowCount, overdueItems.length);
 }
 
 function persistAndRender({ touchUpdatedAt = true, queueSync = true } = {}) {
@@ -1299,6 +1340,18 @@ function setAllSourceFilter(value) {
   render();
 }
 
+function setAllStatusFilter(value) {
+  const nextStatus = value === "due" ? "due" : "all";
+  if (nextStatus === "due" && getOverdueCheckItems().length === 0) {
+    state.filters.allStatus = "all";
+    render();
+    return;
+  }
+
+  state.filters.allStatus = nextStatus;
+  render();
+}
+
 function setAllRoomFilter(value) {
   state.filters.allRoom = normalizeLabel(value);
   render();
@@ -1307,6 +1360,37 @@ function setAllRoomFilter(value) {
 function setShoppingSourceFilter(value) {
   state.filters.shoppingSourceCategory = normalizeLabel(value);
   render();
+}
+
+function confirmAllDueChecks() {
+  const overdueItems = getOverdueCheckItems();
+  if (overdueItems.length === 0) {
+    showToast("No due checks to confirm.", "error");
+    render();
+    return;
+  }
+
+  const overdueIds = new Set(overdueItems.map((item) => item.id));
+  const now = new Date().toISOString();
+  state.items = state.items.map((item) => {
+    if (!overdueIds.has(item.id)) {
+      return item;
+    }
+    return {
+      ...item,
+      lastCheckedAt: now,
+      updatedAt: now,
+    };
+  });
+
+  if (state.filters.allStatus === "due") {
+    state.filters.allStatus = "all";
+  }
+
+  const itemNoun = overdueItems.length === 1 ? "item" : "items";
+  showToast(`Confirmed ${overdueItems.length} due ${itemNoun}.`, "success");
+  setSettingsNotice("", "");
+  persistAndRender({ touchUpdatedAt: true });
 }
 
 function addSourceCategoryPreset(value) {
@@ -1766,6 +1850,7 @@ function resetLocalData() {
   state.filters = {
     allSourceCategory: "",
     allRoom: "",
+    allStatus: "all",
     shoppingSourceCategory: "",
   };
   searchInput.value = "";
@@ -1845,8 +1930,10 @@ bindAppEvents({
   onStorageStateChange: handleStorageStateChange,
   updateViewportOffsetBottom,
   setAllSourceFilter,
+  setAllStatusFilter,
   setAllRoomFilter,
   setShoppingSourceFilter,
+  confirmAllDueChecks,
 });
 
 updateViewportOffsetBottom();

@@ -381,8 +381,8 @@ export function renderShoppingList(
   container.innerHTML = markup;
 }
 
-export function renderSummary(target, totalItems, lowItems) {
-  target.textContent = `${totalItems} items • ${lowItems} low stock`;
+export function renderSummary(target, totalItems, lowItems, dueItems = 0) {
+  target.textContent = `${totalItems} items • ${lowItems} low stock • ${dueItems} due checks`;
 }
 
 export function toggleEmptyState(node, isVisible) {

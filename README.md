@@ -167,7 +167,7 @@ Milestones A, B, and C are implemented:
 - Bottom navigation (`All`, `Shopping`, `Settings`) with low-stock badge
 - Dedicated Shopping view (low-stock items only)
 - Shopping planning actions (`+/-`, quantity input, `Max`, `Apply purchases`, `Copy list`, `Share list`)
-- In-app quantity check reminders with one-tap `Check` confirmation in All view
+- In-app quantity check reminders with one-tap `Check`, dedicated `Due checks` filter, and bulk `Confirm all due` action
 - Per-item source categories (multi-select) and room assignment, with source/room filtering
 - Shopping grouped by source category, including `Unassigned` fallback and per-row source tags
 - Settings: default threshold, backup import/export, reset local data
