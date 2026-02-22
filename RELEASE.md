@@ -1,6 +1,8 @@
 # Release Guide
 
-This project uses a lightweight manual release flow with SemVer.
+This project uses SemVer with:
+- automatic `PATCH` releases on successful merges to `main`,
+- manual `MINOR`/`MAJOR` releases when explicitly needed.
 
 ## Versioning Policy
 
@@ -26,6 +28,17 @@ CI_LOCAL_WITH_DEPS=1 npm run ci:local
 4. Confirm README `Changelog` has a clear `Unreleased` section.
 5. Verify important PRs are merged and release scope is frozen.
 
+## Automatic Patch Pipeline
+
+- Trigger: push to `main` (for example after a merged PR).
+- Order: validate -> e2e -> GitHub Pages deploy -> patch release.
+- Release behavior:
+  - find latest `vMAJOR.MINOR.PATCH` tag,
+  - increment patch by 1,
+  - tag the deployed `main` commit,
+  - publish a GitHub Release with generated notes.
+- Idempotency: if the `main` commit is already tagged, release creation is skipped.
+
 ## Manual Mobile Smoke (Required)
 
 ### iOS Safari
@@ -33,7 +46,7 @@ CI_LOCAL_WITH_DEPS=1 npm run ci:local
 - Launch app and verify existing local state loads.
 - Add item via quick-add and confirm quantity defaults to `1`.
 - Verify `+`, `-`, inline quantity edit, and delete + undo.
-- Open `Restock` and verify filtering logic.
+- Open `Shopping` and verify low-stock grouping/filtering logic.
 - Open `Settings` and verify:
   - sync status chip updates correctly,
   - `Sync Now` works,
@@ -47,10 +60,10 @@ CI_LOCAL_WITH_DEPS=1 npm run ci:local
   - close/reopen app and confirm sync link restore behavior,
   - force a sync conflict and resolve it.
 
-## Release Steps
+## Manual Minor/Major Release Steps
 
-1. Pick next version number following SemVer.
-2. Run automated release preparation from `main`:
+1. Pick next target `MINOR` or `MAJOR` version.
+2. Run release preparation from `main`:
 
 ```bash
 git checkout main
