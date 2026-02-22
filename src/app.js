@@ -24,6 +24,7 @@ import {
 } from "./store.js";
 import {
   renderList,
+  renderAuditList,
   renderShoppingList,
   renderSummary,
   toggleEmptyState,
@@ -53,6 +54,7 @@ import {
 
 const VIEWS = {
   ALL: "all",
+  AUDIT: "audit",
   SHOPPING: "shopping",
   SETTINGS: "settings",
 };
@@ -85,17 +87,23 @@ const {
   syncStatusChip,
   listToolbar,
   inventoryView,
+  auditView,
   shoppingView,
   settingsView,
   itemList,
+  auditList,
   shoppingList,
+  auditRoomFilterInput,
   shoppingSourceFilterInput,
   summaryLine,
+  auditSummaryLine,
   shoppingSummaryLine,
+  auditConfirmVisibleButton,
   copyShoppingButton,
   shareShoppingButton,
   applyPurchasedButton,
   emptyState,
+  auditEmptyState,
   bulkEditPanel,
   bulkEditSelectionSummary,
   bulkEditSourceList,
@@ -104,6 +112,7 @@ const {
   bulkEditSelectVisibleButton,
   bulkEditClearSelectionButton,
   bulkEditApplyButton,
+  auditBadge,
   shoppingEmptyState,
   navTabs,
   shoppingBadge,
@@ -135,6 +144,7 @@ const state = {
     allSourceCategory: "",
     allRoom: "",
     allStatus: "all",
+    auditRoom: "",
     shoppingSourceCategory: "",
   },
   activeView: VIEWS.ALL,
@@ -339,6 +349,12 @@ function getShoppingItems() {
   });
 }
 
+function getAuditItems(nowTimestamp = Date.now()) {
+  return getOverdueCheckItems(nowTimestamp).filter((item) =>
+    itemMatchesRoom(item, state.filters.auditRoom)
+  );
+}
+
 function getGroupedShoppingItems(items) {
   if (items.length === 0) {
     return [];
@@ -412,6 +428,12 @@ function renderFilterControls() {
     "All rooms",
     state.filters.allRoom
   );
+  state.filters.auditRoom = renderFilterSelect(
+    auditRoomFilterInput,
+    roomOptions,
+    "All rooms",
+    state.filters.auditRoom
+  );
   state.filters.shoppingSourceCategory = renderFilterSelect(
     shoppingSourceFilterInput,
     sourceCategoryOptions,
@@ -477,12 +499,13 @@ function renderBulkSourceDraftOptions(sourceCategoryOptions) {
 
 function renderBulkEditPanel({
   isSettings = false,
+  isAudit = false,
   isShopping = false,
   visibleItems = [],
   sourceCategoryOptions = [],
   roomOptions = [],
 } = {}) {
-  const canShowBulkPanel = !isSettings && !isShopping;
+  const canShowBulkPanel = !isSettings && !isShopping && !isAudit;
   if (!canShowBulkPanel) {
     bulkEditPanel.classList.add("hidden");
     if (bulkEditToggleButton) {
@@ -1248,6 +1271,36 @@ function renderInventoryPanel(
   toggleEmptyState(emptyState, true);
 }
 
+function renderAuditPanel(overdueItems) {
+  renderAuditList(auditList, overdueItems, {
+    defaultCheckIntervalDays: state.settings.defaultCheckIntervalDays,
+  });
+
+  const roomLabel = normalizeLabel(state.filters.auditRoom) || "All rooms";
+  const itemNoun = overdueItems.length === 1 ? "item" : "items";
+  auditSummaryLine.textContent = `${overdueItems.length} due ${itemNoun} • ${roomLabel}`;
+
+  if (auditConfirmVisibleButton) {
+    auditConfirmVisibleButton.disabled = overdueItems.length === 0;
+    if (overdueItems.length === 0) {
+      auditConfirmVisibleButton.textContent = "Confirm shown due";
+    } else {
+      const checkNoun = overdueItems.length === 1 ? "check" : "checks";
+      auditConfirmVisibleButton.textContent = `Confirm shown (${overdueItems.length} ${checkNoun})`;
+    }
+  }
+
+  if (overdueItems.length > 0) {
+    toggleEmptyState(auditEmptyState, false);
+    return;
+  }
+
+  auditEmptyState.textContent = state.filters.auditRoom
+    ? "No due checks in the selected room."
+    : "No due checks right now.";
+  toggleEmptyState(auditEmptyState, true);
+}
+
 function renderShoppingPanel() {
   const shoppingItems = getShoppingItems();
   const groupedShoppingItems = getGroupedShoppingItems(shoppingItems);
@@ -1285,24 +1338,31 @@ function renderShoppingPanel() {
 function render() {
   const nowTimestamp = Date.now();
   const isSettings = state.activeView === VIEWS.SETTINGS;
+  const isAudit = state.activeView === VIEWS.AUDIT;
   const isShopping = state.activeView === VIEWS.SHOPPING;
   const sourceCategoryOptions = getSourceCategoryOptions();
   const roomOptions = getRoomOptions();
   renderFilterControls();
   const overdueItems = getOverdueCheckItems(nowTimestamp);
+  const auditItems = getAuditItems(nowTimestamp);
   renderStatusFilterControls(overdueItems.length);
   const visibleItems = getVisibleItems(nowTimestamp);
   const lowCount = state.items.filter(isLowStock).length;
   applyThemeMode(state.settings.themeMode);
 
-  listToolbar.classList.toggle("hidden", isSettings || isShopping);
-  inventoryView.classList.toggle("hidden", isSettings || isShopping);
+  listToolbar.classList.toggle("hidden", isSettings || isShopping || isAudit);
+  inventoryView.classList.toggle("hidden", isSettings || isShopping || isAudit);
+  auditView.classList.toggle("hidden", !isAudit);
   shoppingView.classList.toggle("hidden", !isShopping);
   settingsView.classList.toggle("hidden", !isSettings);
-  quickAddForm.classList.toggle("hidden", isSettings || isShopping || state.bulkEdit.isActive);
+  quickAddForm.classList.toggle(
+    "hidden",
+    isSettings || isShopping || isAudit || state.bulkEdit.isActive
+  );
 
   renderBulkEditPanel({
     isSettings,
+    isAudit,
     isShopping,
     visibleItems,
     sourceCategoryOptions,
@@ -1319,6 +1379,8 @@ function render() {
     }
   });
 
+  auditBadge.textContent = overdueItems.length > 99 ? "99+" : String(overdueItems.length);
+  auditBadge.classList.toggle("hidden", overdueItems.length === 0);
   shoppingBadge.textContent = lowCount > 99 ? "99+" : String(lowCount);
   shoppingBadge.classList.toggle("hidden", lowCount === 0);
   renderCheckReminderState(overdueItems, nowTimestamp);
@@ -1348,6 +1410,11 @@ function render() {
 
   if (isShopping) {
     renderShoppingPanel();
+    return;
+  }
+
+  if (isAudit) {
+    renderAuditPanel(auditItems);
     return;
   }
 
@@ -1741,6 +1808,11 @@ function setShoppingSourceFilter(value) {
   render();
 }
 
+function setAuditRoomFilter(value) {
+  state.filters.auditRoom = normalizeLabel(value);
+  render();
+}
+
 function confirmAllDueChecks() {
   const overdueItems = getOverdueCheckItems();
   if (overdueItems.length === 0) {
@@ -1768,6 +1840,33 @@ function confirmAllDueChecks() {
 
   const itemNoun = overdueItems.length === 1 ? "item" : "items";
   showToast(`Confirmed ${overdueItems.length} due ${itemNoun}.`, "success");
+  setSettingsNotice("", "");
+  persistAndRender({ touchUpdatedAt: true });
+}
+
+function confirmVisibleAuditChecks() {
+  const auditItems = getAuditItems();
+  if (auditItems.length === 0) {
+    showToast("No shown due checks to confirm.", "error");
+    render();
+    return;
+  }
+
+  const auditItemIds = new Set(auditItems.map((item) => item.id));
+  const now = new Date().toISOString();
+  state.items = state.items.map((item) => {
+    if (!auditItemIds.has(item.id)) {
+      return item;
+    }
+    return {
+      ...item,
+      lastCheckedAt: now,
+      updatedAt: now,
+    };
+  });
+
+  const itemNoun = auditItems.length === 1 ? "item" : "items";
+  showToast(`Confirmed ${auditItems.length} due ${itemNoun}.`, "success");
   setSettingsNotice("", "");
   persistAndRender({ touchUpdatedAt: true });
 }
@@ -2324,8 +2423,10 @@ bindAppEvents({
   applyBulkEdits,
   setAllStatusFilter,
   setAllRoomFilter,
+  setAuditRoomFilter,
   setShoppingSourceFilter,
   confirmAllDueChecks,
+  confirmVisibleAuditChecks,
 });
 
 updateViewportOffsetBottom();

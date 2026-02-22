@@ -635,6 +635,67 @@ body {
   margin-top: 0.9rem;
 }
 
+.audit-view {
+  margin-top: 0.9rem;
+}
+
+.audit-toolbar {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.audit-toolbar .summary-line {
+  margin: 0;
+}
+
+.audit-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+}
+
+.audit-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.audit-row {
+  border: 1px solid #e8d3ac;
+  border-radius: 0.9rem;
+  background: var(--low-bg);
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.audit-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.audit-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.audit-due {
+  margin: 0;
+  color: var(--low-text);
+  font-size: 0.83rem;
+  font-weight: 700;
+}
+
+.audit-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+}
+
 .shopping-toolbar {
   display: grid;
   gap: 0.55rem;
@@ -985,7 +1046,7 @@ body {
   border-radius: 1rem;
   background: var(--panel);
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.35rem;
   padding: 0.35rem;
   backdrop-filter: blur(6px);
@@ -1141,6 +1202,15 @@ body {
 
 :root[data-theme="dark"] .shopping-row.is-planned .shopping-name {
   color: #b7e8c7;
+}
+
+:root[data-theme="dark"] .audit-row {
+  border-color: #7c6a4a;
+  background: #332a1c;
+}
+
+:root[data-theme="dark"] .audit-due {
+  color: #ffd699;
 }
 
 :root[data-theme="dark"] .check-reminder-panel {

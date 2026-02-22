@@ -198,6 +198,32 @@
         </p>
       </section>
 
+      <section id="audit-view" class="audit-view hidden" aria-label="Room audit checks">
+        <div class="audit-toolbar">
+          <label class="filter-field shopping-filter-field" for="audit-room-filter-input">
+            <span>Room</span>
+            <select id="audit-room-filter-input" name="auditRoomFilter">
+              <option value="">All rooms</option>
+            </select>
+          </label>
+          <p id="audit-summary-line" class="summary-line" aria-live="polite"></p>
+          <div class="audit-actions">
+            <button
+              id="audit-confirm-visible-button"
+              class="action-button primary-button"
+              type="button"
+              aria-label="Confirm all shown due checks"
+            >
+              Confirm shown due
+            </button>
+          </div>
+        </div>
+        <ul id="audit-list" class="audit-list"></ul>
+        <p id="audit-empty-state" class="empty-state hidden">
+          No due checks in this room.
+        </p>
+      </section>
+
       <section
         id="shopping-view"
         class="shopping-view hidden"
@@ -427,6 +453,15 @@
           aria-label="Open all items view"
         >
           All
+        </button>
+        <button
+          class="nav-tab"
+          type="button"
+          data-view="audit"
+          aria-label="Open audit view"
+        >
+          Audit
+          <span id="audit-badge" class="badge hidden" aria-live="polite">0</span>
         </button>
         <button
           class="nav-tab"

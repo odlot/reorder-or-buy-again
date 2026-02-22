@@ -45,8 +45,10 @@ export function bindAppEvents({
   applyBulkEdits,
   setAllStatusFilter,
   setAllRoomFilter,
+  setAuditRoomFilter,
   setShoppingSourceFilter,
   confirmAllDueChecks,
+  confirmVisibleAuditChecks,
 }) {
   const {
     searchInput,
@@ -74,7 +76,9 @@ export function bindAppEvents({
     bulkEditClearSelectionButton,
     bulkEditCancelButton,
     bulkEditApplyButton,
+    auditRoomFilterInput,
     shoppingSourceFilterInput,
+    auditConfirmVisibleButton,
     exportDataButton,
     importDataButton,
     importDataInput,
@@ -84,6 +88,7 @@ export function bindAppEvents({
     clearSyncLinkButton,
     navTabs,
     itemList,
+    auditList,
     shoppingList,
     copyShoppingButton,
     shareShoppingButton,
@@ -110,6 +115,10 @@ export function bindAppEvents({
 
   allRoomFilterInput.addEventListener("change", (event) => {
     setAllRoomFilter(event.target.value);
+  });
+
+  auditRoomFilterInput.addEventListener("change", (event) => {
+    setAuditRoomFilter(event.target.value);
   });
 
   shoppingSourceFilterInput.addEventListener("change", (event) => {
@@ -189,6 +198,10 @@ export function bindAppEvents({
 
   confirmAllDueButton.addEventListener("click", () => {
     confirmAllDueChecks();
+  });
+
+  auditConfirmVisibleButton.addEventListener("click", () => {
+    confirmVisibleAuditChecks();
   });
 
   bulkEditPanel.addEventListener("change", (event) => {
@@ -451,6 +464,28 @@ export function bindAppEvents({
 
     if (action === "shopping-max") {
       setShoppingBuyQuantity(itemId, Number.MAX_SAFE_INTEGER);
+    }
+  });
+
+  auditList.addEventListener("click", (event) => {
+    const actionTarget = event.target.closest("[data-action]");
+    if (!actionTarget) {
+      return;
+    }
+
+    const row = actionTarget.closest("[data-item-id]");
+    if (!row) {
+      return;
+    }
+
+    const itemId = decodeItemId(row.dataset.itemId);
+    if (!itemId) {
+      return;
+    }
+
+    const action = actionTarget.dataset.action;
+    if (action === "audit-confirm-check") {
+      confirmItemCheck(itemId);
     }
   });
 

@@ -52,16 +52,19 @@ test("action controls expose labels and finger-sized tap targets", async ({
     name: "Add item to inventory",
   });
   const allTab = page.getByRole("button", { name: "Open all items view" });
+  const auditTab = page.getByRole("button", { name: "Open audit view" });
   const shoppingTab = page.getByRole("button", { name: "Open shopping view" });
   const settingsTab = page.getByRole("button", { name: "Open settings view" });
 
   await expect(addItemButton).toBeVisible();
   await expect(allTab).toBeVisible();
+  await expect(auditTab).toBeVisible();
   await expect(shoppingTab).toBeVisible();
   await expect(settingsTab).toBeVisible();
 
   await expectTapTarget(addItemButton);
   await expectTapTarget(allTab);
+  await expectTapTarget(auditTab);
   await expectTapTarget(shoppingTab);
   await expectTapTarget(settingsTab);
   await expectTapTarget(page.locator("#status-filter-all"));
@@ -525,6 +528,76 @@ test("due-only filter and confirm-all action clear all due reminders", async ({
   await expect(page.locator("#status-filter-all")).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#status-filter-due")).toHaveText("Due checks (0)");
   await expect(page.locator("#status-filter-due")).toBeDisabled();
+});
+
+test("audit view filters due checks by room and confirms shown items", async ({
+  page,
+}) => {
+  await page.evaluate((storageKey) => {
+    const now = Date.now();
+    const staleTimestamp = new Date(now - 40 * 24 * 60 * 60 * 1000).toISOString();
+
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        items: [
+          {
+            id: "dish-soap",
+            name: "Dish Soap",
+            quantity: 1,
+            lowThreshold: 1,
+            targetQuantity: 2,
+            sourceCategories: ["Grocery"],
+            room: "Kitchen",
+            checkIntervalDays: 14,
+            lastCheckedAt: staleTimestamp,
+            updatedAt: staleTimestamp,
+          },
+          {
+            id: "toothpaste",
+            name: "Toothpaste",
+            quantity: 2,
+            lowThreshold: 1,
+            targetQuantity: 3,
+            sourceCategories: ["Pharmacy"],
+            room: "Bathroom",
+            checkIntervalDays: 14,
+            lastCheckedAt: staleTimestamp,
+            updatedAt: staleTimestamp,
+          },
+        ],
+        settings: {
+          defaultLowThreshold: 1,
+          themeMode: "light",
+          defaultCheckIntervalDays: 14,
+          sourceCategoryPresets: ["Grocery", "Pharmacy"],
+          roomPresets: ["Kitchen", "Bathroom"],
+        },
+        shopping: {
+          buyQuantityByItemId: {},
+        },
+        updatedAt: new Date(now).toISOString(),
+        revision: 1,
+      })
+    );
+  }, STORAGE_KEY);
+
+  await page.reload();
+  await page.getByRole("button", { name: "Open audit view" }).click();
+
+  await expect(page.locator("#audit-summary-line")).toContainText("2 due items");
+  await page.selectOption("#audit-room-filter-input", "Kitchen");
+  await expect(page.locator("#audit-summary-line")).toContainText("1 due item");
+  await expect(page.locator(".audit-row")).toHaveCount(1);
+  await expect(page.locator(".audit-row")).toContainText("Dish Soap");
+
+  await page.locator("#audit-confirm-visible-button").click();
+  await expect(page.locator("#undo-message")).toContainText("Confirmed 1 due item.");
+  await expect(page.locator("#audit-empty-state")).toBeVisible();
+
+  await page.selectOption("#audit-room-filter-input", "Bathroom");
+  await expect(page.locator(".audit-row")).toHaveCount(1);
+  await expect(page.locator(".audit-row")).toContainText("Toothpaste");
 });
 
 test("plus/minus controls update quantity", async ({ page }) => {

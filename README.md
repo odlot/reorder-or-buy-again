@@ -174,6 +174,7 @@ Milestones A, B, and C are implemented:
 - Shopping grouped by source category, including `Unassigned` fallback and per-row source tags
 - Bulk edit mode for multi-select updates of source categories, room, and check interval
 - Bulk edit quick-select controls for all visible items
+- Room Audit view for room-filtered due-check confirmation
 - Settings: default threshold, backup import/export, reset local data
 - Import/export JSON backups
 - Local persistence via `localStorage`
