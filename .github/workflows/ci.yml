@@ -137,3 +137,70 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  release-patch:
+    name: Create Patch Release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - deploy-pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --tags --force
+
+      - name: Create next SemVer patch tag
+        id: create-tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          existing_tag="$(git tag --points-at "$GITHUB_SHA" --list 'v*' --sort=-v:refname | head -n 1 || true)"
+          if [[ -n "$existing_tag" ]]; then
+            echo "Head commit already tagged with $existing_tag; skipping."
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            echo "tag=$existing_tag" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          latest_tag="$(git tag --list 'v*' --sort=-v:refname | head -n 1 || true)"
+          if [[ -z "$latest_tag" ]]; then
+            latest_tag="v0.0.0"
+          fi
+
+          if [[ ! "$latest_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "Latest SemVer tag has unsupported format: $latest_tag" >&2
+            exit 1
+          fi
+
+          major="${BASH_REMATCH[1]}"
+          minor="${BASH_REMATCH[2]}"
+          patch="${BASH_REMATCH[3]}"
+          next_patch=$((patch + 1))
+          next_tag="v${major}.${minor}.${next_patch}"
+
+          if git rev-parse "$next_tag" >/dev/null 2>&1; then
+            echo "Tag already exists unexpectedly: $next_tag" >&2
+            exit 1
+          fi
+
+          git tag -a "$next_tag" "$GITHUB_SHA" -m "Release $next_tag"
+          git push origin "$next_tag"
+
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "tag=$next_tag" >> "$GITHUB_OUTPUT"
+          echo "Created release tag $next_tag."
+
+      - name: Publish GitHub Release
+        if: steps.create-tag.outputs.created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.create-tag.outputs.tag }}
+        run: gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --title "$RELEASE_TAG" --generate-notes

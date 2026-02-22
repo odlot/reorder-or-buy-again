@@ -49,7 +49,7 @@ Notes:
 CI_LOCAL_WITH_DEPS=1 npm run ci:local
 ```
 
-Prepare a release (from `main`) with automated changelog + tag creation:
+Prepare a manual minor/major release (from `main`) with changelog + tag creation:
 
 ```bash
 npm run release -- 0.1.0
@@ -60,7 +60,9 @@ In GitHub Actions CI, Playwright debug artifacts (`playwright-report/`, `test-re
 ## Versioning and Changelog
 
 - Versioning model: SemVer (`MAJOR.MINOR.PATCH`).
-- Current release channel: v0.1.0.
+- Current release channel: automated `v*` tags in GitHub Releases.
+- Patch releases are created automatically on successful merges to `main`.
+- Manual release process is intended for explicit `MINOR`/`MAJOR` bumps.
 - Release process and checklist: see `RELEASE.md`.
 
 ### Changelog
@@ -87,7 +89,7 @@ One-time setup in GitHub:
 2. Go to `Pages`.
 3. Set source to `GitHub Actions`.
 
-After that, every push to `main` runs validation, e2e, and then deploys the static site automatically.
+After that, every push to `main` runs validation, e2e, deploys the static site, and creates the next SemVer patch release tag automatically.
 
 ## Persistence and Offline Sync
 
