@@ -219,6 +219,46 @@ test("bulk edit mode applies source, room, and check interval to selected items"
   expect(paperTowels.checkIntervalDays).toBe(14);
 });
 
+test("bulk edit mode can select and deselect all visible items", async ({ page }) => {
+  await page.locator("#bulk-edit-toggle-button").click();
+  await expect(page.locator("#bulk-edit-panel")).toBeVisible();
+
+  const initialVisibleCount = await page.locator(".item-row").count();
+  const initialSelectedLabel = `${initialVisibleCount} ${
+    initialVisibleCount === 1 ? "item" : "items"
+  } selected`;
+  const selectVisibleButton = page.locator("#bulk-edit-select-visible-button");
+  await expect(selectVisibleButton).toContainText(
+    `Select visible (${initialVisibleCount})`
+  );
+
+  await selectVisibleButton.click();
+  await expect(page.locator("#bulk-edit-selection-summary")).toContainText(initialSelectedLabel);
+  await expect(selectVisibleButton).toContainText(
+    `Deselect visible (${initialVisibleCount})`
+  );
+
+  await page.selectOption("#all-source-filter-input", "Grocery");
+  const filteredVisibleCount = await page.locator(".item-row").count();
+  const filteredSelectedLabel = `${filteredVisibleCount} ${
+    filteredVisibleCount === 1 ? "item" : "items"
+  } selected`;
+  await expect(page.locator("#bulk-edit-selection-summary")).toContainText(
+    filteredSelectedLabel
+  );
+  await expect(selectVisibleButton).toContainText(
+    `Deselect visible (${filteredVisibleCount})`
+  );
+
+  await selectVisibleButton.click();
+  await expect(page.locator("#bulk-edit-selection-summary")).toContainText(
+    "0 items selected"
+  );
+  await expect(selectVisibleButton).toContainText(
+    `Select visible (${filteredVisibleCount})`
+  );
+});
+
 test("shopping view groups by source and supports source filtering", async ({
   page,
 }) => {

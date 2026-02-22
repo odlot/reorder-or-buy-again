@@ -33,6 +33,9 @@ export const dom = {
   bulkEditCheckIntervalInput: document.querySelector(
     "#bulk-edit-check-interval-input"
   ),
+  bulkEditSelectVisibleButton: document.querySelector(
+    "#bulk-edit-select-visible-button"
+  ),
   bulkEditClearSelectionButton: document.querySelector(
     "#bulk-edit-clear-selection-button"
   ),

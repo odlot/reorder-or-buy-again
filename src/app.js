@@ -101,6 +101,7 @@ const {
   bulkEditSourceList,
   bulkEditRoomSelect,
   bulkEditCheckIntervalInput,
+  bulkEditSelectVisibleButton,
   bulkEditClearSelectionButton,
   bulkEditApplyButton,
   shoppingEmptyState,
@@ -499,6 +500,7 @@ function renderBulkEditPanel({
     visibleIdSet.has(itemId)
   );
   setBulkSelection(selectedVisibleIds);
+  const visibleCount = visibleItems.length;
   const selectedCount = selectedVisibleIds.length;
 
   if (!state.bulkEdit.isActive) {
@@ -518,6 +520,13 @@ function renderBulkEditPanel({
   bulkEditPanel.classList.remove("hidden");
   const itemNoun = selectedCount === 1 ? "item" : "items";
   bulkEditSelectionSummary.textContent = `${selectedCount} ${itemNoun} selected`;
+  const allVisibleSelected = visibleCount > 0 && selectedCount === visibleCount;
+  if (bulkEditSelectVisibleButton) {
+    bulkEditSelectVisibleButton.disabled = visibleCount === 0;
+    bulkEditSelectVisibleButton.textContent = allVisibleSelected
+      ? `Deselect visible (${visibleCount})`
+      : `Select visible (${visibleCount})`;
+  }
 
   renderBulkSourceDraftOptions(sourceCategoryOptions);
 
@@ -1556,6 +1565,28 @@ function toggleBulkItemSelection(itemId) {
   render();
 }
 
+function toggleBulkVisibleSelection() {
+  if (!state.bulkEdit.isActive) {
+    return;
+  }
+
+  const visibleItems = getVisibleItems(Date.now());
+  if (visibleItems.length === 0) {
+    render();
+    return;
+  }
+
+  const visibleIds = visibleItems.map((item) => item.id);
+  const visibleIdSet = new Set(visibleIds);
+  const selectedVisibleIds = getExistingBulkSelection().filter((itemId) =>
+    visibleIdSet.has(itemId)
+  );
+  const selectedVisibleIdSet = new Set(selectedVisibleIds);
+  const allVisibleSelected = visibleIds.every((itemId) => selectedVisibleIdSet.has(itemId));
+  setBulkSelection(allVisibleSelected ? [] : visibleIds);
+  render();
+}
+
 function clearBulkSelection() {
   if (!state.bulkEdit.isActive) {
     return;
@@ -2285,6 +2316,7 @@ bindAppEvents({
   setAllSourceFilter,
   setBulkEditMode,
   toggleBulkItemSelection,
+  toggleBulkVisibleSelection,
   clearBulkSelection,
   setBulkDraftRoom,
   setBulkDraftCheckInterval,

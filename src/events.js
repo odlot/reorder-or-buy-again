@@ -37,6 +37,7 @@ export function bindAppEvents({
   setAllSourceFilter,
   setBulkEditMode,
   toggleBulkItemSelection,
+  toggleBulkVisibleSelection,
   clearBulkSelection,
   setBulkDraftRoom,
   setBulkDraftCheckInterval,
@@ -69,6 +70,7 @@ export function bindAppEvents({
     bulkEditPanel,
     bulkEditRoomSelect,
     bulkEditCheckIntervalInput,
+    bulkEditSelectVisibleButton,
     bulkEditClearSelectionButton,
     bulkEditCancelButton,
     bulkEditApplyButton,
@@ -203,6 +205,10 @@ export function bindAppEvents({
 
   bulkEditCheckIntervalInput.addEventListener("input", (event) => {
     setBulkDraftCheckInterval(event.target.value);
+  });
+
+  bulkEditSelectVisibleButton.addEventListener("click", () => {
+    toggleBulkVisibleSelection();
   });
 
   bulkEditClearSelectionButton.addEventListener("click", () => {
